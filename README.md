@@ -55,7 +55,7 @@ west flash
 It's possible to build, flash and debug the firmware without the whole
 chromiumos checkout, in that case just pick an arbitrary directory as a
 workspace instead of `~/chromiumos/src/platform/ec-aic-tester` and initialize
-it with `west init -l
+it with `west init --mf firmware/west.yml -m
 https://chromium.googlesource.com/chromiumos/platform/ec-aic-tester`, the rest
 of the process it the same.
 
@@ -70,7 +70,6 @@ case follow the project [Getting Started
 Guide](https://docs.zephyrproject.org/latest/getting_started/index.html), make
 sure that the `ZEPHYR_BASE` variable is set and run `west build` from the
 project `firwmare` directory.
-
 
 ### Available runners
 
