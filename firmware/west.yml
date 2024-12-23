@@ -4,14 +4,24 @@
 
 manifest:
   remotes:
-    - name: zephyrproject-rtos
-      url-base: https://github.com/zephyrproject-rtos
+    - name: chromium
+      url-base: https://chromium.googlesource.com/chromiumos
 
   projects:
     - name: zephyr
-      remote: zephyrproject-rtos
+      remote: chromium
+      repo-path: third_party/zephyr
       revision: main
-      import:
-        name-allowlist:
-          - cmsis
-          - hal_stm32
+      west-commands: scripts/west-commands.yml
+
+    - name: cmsis
+      remote: chromium
+      repo-path: third_party/zephyr/cmsis
+      revision: chromeos-main
+      path: modules/hal/cmsis
+
+    - name: hal_stm32
+      remote: chromium
+      repo-path: third_party/zephyr/hal_stm32
+      revision: chromeos-main
+      path: modules/hal/stm32

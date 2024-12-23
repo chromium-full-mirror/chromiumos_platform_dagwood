@@ -62,6 +62,15 @@ of the process it the same.
 This setup takes less disk space, but results in a checkout with no tools to
 upload changelists.
 
+### Using the usptream repositories instead of chromium mirrored ones
+
+The project is setup to use the chromium mirror of Zephyr and modules, but can
+also be built against the upstream repositories directly. To do that use the
+`west-upstream.yml` manifest when initializing the west workspace, for example
+
+```
+west init -l firmware --mf west-upstream.yml
+```
 
 ### Build with a standalone full Zephyr checkout
 
