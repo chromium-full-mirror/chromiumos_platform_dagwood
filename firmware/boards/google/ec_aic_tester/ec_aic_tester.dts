@@ -54,6 +54,54 @@
 			transfer-size = <1>;
 		};
 	};
+
+	pp3300_mecc_core: pp3300_mecc_core {
+		compatible = "regulator-fixed";
+		regulator-name = "pp3300_mecc_core";
+		enable-gpios = <&gpiob 8 GPIO_ACTIVE_HIGH>;
+	};
+
+	pp3300_mecc_z: pp3300_mecc_z {
+		compatible = "regulator-fixed";
+		regulator-name = "pp3300_mecc_z";
+		enable-gpios = <&gpiob 9 GPIO_ACTIVE_HIGH>;
+	};
+
+	pp3300_mecc_s: pp3300_mecc_s {
+		compatible = "regulator-fixed";
+		regulator-name = "pp3300_mecc_s";
+		enable-gpios = <&gpiob 10 GPIO_ACTIVE_HIGH>;
+	};
+
+	ppvar_mecc_vref: ppvar_mecc_vref {
+		compatible = "regulator-fixed";
+		regulator-name = "ppvar_mecc_vref";
+		enable-gpios = <&gpiob 11 GPIO_ACTIVE_HIGH>;
+	};
+
+	pp1800_mecc_z: pp1800_mecc_z {
+		compatible = "regulator-fixed";
+		regulator-name = "pp1800_mecc_z";
+		enable-gpios = <&gpiob 12 GPIO_ACTIVE_HIGH>;
+	};
+
+	pp1800_mecc_s: pp1800_mecc_s {
+		compatible = "regulator-fixed";
+		regulator-name = "pp1800_mecc_s";
+		enable-gpios = <&gpiob 13 GPIO_ACTIVE_HIGH>;
+	};
+
+	pp5000_mecc_z: pp5000_mecc_z {
+		compatible = "regulator-fixed";
+		regulator-name = "pp5000_mecc_z";
+		enable-gpios = <&gpiob 14 GPIO_ACTIVE_HIGH>;
+	};
+
+	ppvar_mecc_rtc: ppvar_mecc_rtc {
+		compatible = "regulator-fixed";
+		regulator-name = "ppvar_mecc_rtc";
+		enable-gpios = <&gpiob 15 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &clk_lsi {
