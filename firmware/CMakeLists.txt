@@ -16,3 +16,5 @@ target_sources(app PRIVATE
 	src/main.c
 	src/usbd.c
 )
+
+target_sources_ifdef(CONFIG_DT_HAS_ZEPHYR_UART_BRIDGE_ENABLED app PRIVATE src/uart-bridge.c)
