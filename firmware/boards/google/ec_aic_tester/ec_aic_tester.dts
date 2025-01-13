@@ -43,7 +43,7 @@
 		die-temp0 = &die_temp;
 	};
 
-	uart-bridge {
+	uart_bridge: uart-bridge {
 		compatible = "zephyr,uart-bridge";
 		usb {
 			device = <&cdc_acm_uart_ec>;

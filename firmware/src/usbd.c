@@ -3,6 +3,8 @@
  * found in the LICENSE file.
  */
 
+#include "uart-bridge.h"
+
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
 #include <zephyr/usb/usbd.h>
@@ -40,7 +42,13 @@ static void usbd_msg_cb(struct usbd_context *const usbd_ctx,
 {
 	int ret;
 
-	LOG_INF("USBD message: %s", usbd_msg_type_string(msg->type));
+	LOG_DBG("USBD message: %s", usbd_msg_type_string(msg->type));
+
+	if (msg->type == USBD_MSG_CDC_ACM_LINE_CODING ||
+	    msg->type == USBD_MSG_CDC_ACM_CONTROL_LINE_STATE) {
+		uart_bridge_settings_update(
+			msg->dev, DEVICE_DT_GET(DT_NODELABEL(uart_bridge)));
+	}
 
 	if (!usbd_can_detect_vbus(usbd_ctx)) {
 		return;
