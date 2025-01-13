@@ -12,8 +12,8 @@
 
 LOG_MODULE_REGISTER(usbd_app, LOG_LEVEL_INF);
 
-#define USB_VID 0x2fe3 /* TODO: change this */
-#define USB_PID 0x0001 /* TODO: change this */
+#define USB_VID 0x18d1
+#define USB_PID 0x5214
 #define USB_MANUFACTURER_NAME "Google"
 #define USB_DEVICE_NAME "EC AIC Tester"
 #define USB_MAX_POWER 250
@@ -21,7 +21,7 @@ LOG_MODULE_REGISTER(usbd_app, LOG_LEVEL_INF);
 USBD_DEVICE_DEFINE(app_usbd,
 		   DEVICE_DT_GET(DT_NODELABEL(zephyr_udc0)),
 		   USB_VID,
-		   USB_VID);
+		   USB_PID);
 
 USBD_DESC_LANG_DEFINE(app_usb_lang);
 USBD_DESC_MANUFACTURER_DEFINE(app_usb_mfr, USB_MANUFACTURER_NAME);
