@@ -36,6 +36,53 @@ struct uart_bridge_data {
 	struct uart_bridge_peer_data peer[2];
 };
 
+static const struct device *
+uart_bridge_get_peer(const struct device *dev, const struct device *bridge_dev)
+{
+	const struct uart_bridge_config *cfg = bridge_dev->config;
+
+	if (dev == cfg->peer[0].dev) {
+		return cfg->peer[1].dev;
+	} else if (dev == cfg->peer[1].dev) {
+		return cfg->peer[0].dev;
+	} else {
+		return NULL;
+	}
+}
+
+void uart_bridge_settings_update(const struct device *dev,
+				 const struct device *bridge_dev)
+{
+	struct uart_config cfg;
+	const struct device *peer_dev = uart_bridge_get_peer(dev, bridge_dev);
+	int ret;
+
+	if (peer_dev == NULL) {
+		LOG_DBG("%s: not a bridge dev", dev->name);
+		return;
+	}
+
+	LOG_DBG("update settings: dev=%s bridge=%s peer=%s", dev->name,
+		bridge_dev->name, peer_dev->name);
+
+	ret = uart_config_get(dev, &cfg);
+	if (ret) {
+		LOG_WRN("%s: failed to get the uart config: %d", dev->name,
+			ret);
+		return;
+	}
+
+	ret = uart_configure(peer_dev, &cfg);
+	if (ret) {
+		LOG_WRN("%s: failed to set the uart config: %d", peer_dev->name,
+			ret);
+		return;
+	}
+
+	LOG_INF("uart settings: baudrate=%d parity=%d", cfg.baudrate,
+		cfg.parity);
+}
+
 static uint8_t uart_bridge_get_idx(const struct device *dev,
 				   const struct device *bridge_dev, bool own)
 {
