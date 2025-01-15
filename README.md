@@ -142,3 +142,26 @@ or
 ```
 west debug -r openocd
 ```
+
+## Flashing the AIC board
+
+### ITE
+
+```
+zmake build ite-aic
+itecomdbgr -f build/zephyr/ite-aic/output/ec.bin -d /dev/ttyACM1
+# reset the ec (ec reset)
+```
+
+### NPCX
+
+Assuming the tester shell is on /dev/ttyACM0 and the EC on /dev/ttyACM1, from
+the chroot in the EC directory:
+
+```
+zmake build npcx-aic
+# power on the ec (ec power on) enter bootloader mode (npcx_boot) on the tester shell
+uartupdatetool --port=ttyACM1 --baudrate=115200 --opr=wr --addr=0x200C3020 --file build/zephyr/npcx-aic/output/npcx_monitor.bin
+uartupdatetool --port=ttyACM1 --baudrate=115200 --opr=wr --auto --offset=0 --file build/zephyr/npcx-aic/output/ec.bin
+# reset the ec (ec reset)
+```
