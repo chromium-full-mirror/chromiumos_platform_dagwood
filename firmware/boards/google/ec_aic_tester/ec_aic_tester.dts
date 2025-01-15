@@ -107,6 +107,20 @@
 		compatible = "cros,aic-pins";
 		ec-rst-gpios = <&gpioe 3 GPIO_ACTIVE_LOW>;
 	};
+
+	npcx-boot {
+		compatible = "cros,npcx-boot";
+		npcx-boot-gpios = <&gpioa 1 GPIO_ACTIVE_LOW>;
+		pinctrl-0 = <&pa1_gpio>;
+		pinctrl-1 = <&uart4_rx_pa1>;
+		pinctrl-names = "gpio", "default";
+	};
+};
+
+&pinctrl {
+	pa1_gpio: pa1_gpio {
+		pinmux = <STM32_PINMUX('A', 1, GPIO)>;
+	};
 };
 
 &clk_lsi {

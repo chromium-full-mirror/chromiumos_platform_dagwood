@@ -1,0 +1,24 @@
+# Copyright 2025 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+description: |
+  Support data to reset an NPCX chip in bootloader mode.
+
+compatible: "cros,npcx-boot"
+
+include: pinctrl-device.yaml
+
+properties:
+  pinctrl-0:
+    required: true
+
+  pinctrl-1:
+    required: true
+
+  pinctrl-names:
+    required: true
+
+  npcx-boot-gpios:
+    type: phandle-array
+    required: true
