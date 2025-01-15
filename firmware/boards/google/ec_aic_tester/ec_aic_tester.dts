@@ -28,7 +28,7 @@
 		};
 	};
 
-	gpio_keys {
+	gpio_keys: gpio-keys {
 		compatible = "gpio-keys";
 		user_button: mcu_pb01 {
 			gpios = <&gpiob 1 GPIO_ACTIVE_LOW>;
