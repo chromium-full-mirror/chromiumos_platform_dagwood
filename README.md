@@ -95,6 +95,9 @@ and then run:
 west flash -r dfu-util
 ```
 
+NOTE: flashing with dfu-util normally fails in an error and requires a manual
+reset of the board
+
 #### JLink
 
 JLink can be used for both flahing and debugging, requires the [J-Link Software](https://www.segger.com/downloads/jlink/#J-LinkSoftwareAndDocumentationPack) installed.
@@ -122,10 +125,20 @@ Flash with:
 west flash -r stm32cubeprogrammer
 ```
 
+or
+
+```
+west flash -r openocd
+```
+
 or start a debugging session with
 
 ```
 west debug -r stm32cubeprogrammer
 ```
 
-TODO: verify that the ones above actually work and check if openocd works for debugging
+or
+
+```
+west debug -r openocd
+```
