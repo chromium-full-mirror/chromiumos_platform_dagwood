@@ -102,6 +102,11 @@
 		regulator-name = "ppvar_mecc_rtc";
 		enable-gpios = <&gpiob 15 GPIO_ACTIVE_HIGH>;
 	};
+
+	aic-pins {
+		compatible = "cros,aic-pins";
+		ec-rst-gpios = <&gpioe 3 GPIO_ACTIVE_LOW>;
+	};
 };
 
 &clk_lsi {

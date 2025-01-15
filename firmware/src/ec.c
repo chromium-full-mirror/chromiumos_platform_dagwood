@@ -3,6 +3,11 @@
  * found in the LICENSE file.
  */
 
+#define DT_DRV_COMPAT cros_aic_pins
+
+#include "ec.h"
+
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/regulator.h>
 #include <zephyr/input/input.h>
 #include <zephyr/kernel.h>
@@ -10,6 +15,12 @@
 #include <zephyr/shell/shell.h>
 
 LOG_MODULE_REGISTER(ec, LOG_LEVEL_INF);
+
+BUILD_ASSERT(DT_NUM_INST_STATUS_OKAY(DT_DRV_COMPAT) == 1,
+	     "only one 'cros,aic-pins' compatible node may be present");
+
+static const struct gpio_dt_spec ec_rst_gpio =
+	GPIO_DT_SPEC_INST_GET(0, ec_rst_gpios);
 
 static const struct device *reg_pp3300_mecc_core =
 	DEVICE_DT_GET(DT_NODELABEL(pp3300_mecc_core));
@@ -77,6 +88,22 @@ static void button_input_cb(struct input_event *evt, void *user_data)
 INPUT_CALLBACK_DEFINE(DEVICE_DT_GET(DT_NODELABEL(gpio_keys)), button_input_cb,
 		      NULL);
 
+void ec_reset(void)
+{
+	gpio_pin_set_dt(&ec_rst_gpio, 1);
+
+	k_sleep(K_MSEC(100));
+
+	gpio_pin_set_dt(&ec_rst_gpio, 0);
+}
+
+static int cmd_ec_reset(const struct shell *sh, size_t argc, char **argv)
+{
+	ec_reset();
+
+	return 0;
+}
+
 static int cmd_ec_power(const struct shell *sh, size_t argc, char **argv)
 {
 	int err = 0;
@@ -93,9 +120,24 @@ static int cmd_ec_power(const struct shell *sh, size_t argc, char **argv)
 	return 0;
 }
 
-SHELL_STATIC_SUBCMD_SET_CREATE(ec_cmds,
-			       SHELL_CMD_ARG(power, NULL, "power on|off",
-					     cmd_ec_power, 2, 0),
-			       SHELL_SUBCMD_SET_END);
+SHELL_STATIC_SUBCMD_SET_CREATE(
+	ec_cmds, SHELL_CMD_ARG(reset, NULL, "reset", cmd_ec_reset, 1, 0),
+	SHELL_CMD_ARG(power, NULL, "power on|off", cmd_ec_power, 2, 0),
+	SHELL_SUBCMD_SET_END);
 
 SHELL_CMD_REGISTER(ec, &ec_cmds, "EC control commands", NULL);
+
+static int ec_init(void)
+{
+	int ret;
+
+	ret = gpio_pin_configure_dt(&ec_rst_gpio, GPIO_OUTPUT_INACTIVE);
+	if (ret < 0) {
+		LOG_ERR("gpio configuration failed: %d", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+SYS_INIT(ec_init, APPLICATION, 99);
