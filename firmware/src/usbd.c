@@ -6,9 +6,9 @@
 #include "uart-bridge.h"
 
 #include <zephyr/device.h>
+#include <zephyr/input/input.h>
 #include <zephyr/kernel.h>
 #include <zephyr/usb/usbd.h>
-#include <zephyr/input/input.h>
 
 LOG_MODULE_REGISTER(usbd_app, LOG_LEVEL_INF);
 
@@ -18,9 +18,7 @@ LOG_MODULE_REGISTER(usbd_app, LOG_LEVEL_INF);
 #define USB_DEVICE_NAME "EC AIC Tester"
 #define USB_MAX_POWER 250
 
-USBD_DEVICE_DEFINE(app_usbd,
-		   DEVICE_DT_GET(DT_NODELABEL(zephyr_udc0)),
-		   USB_VID,
+USBD_DEVICE_DEFINE(app_usbd, DEVICE_DT_GET(DT_NODELABEL(zephyr_udc0)), USB_VID,
 		   USB_PID);
 
 USBD_DESC_LANG_DEFINE(app_usb_lang);
@@ -90,7 +88,8 @@ static struct usbd_context *usbd_init_device(void)
 
 	err = usbd_add_descriptor(&app_usbd, &app_usb_mfr);
 	if (err) {
-		LOG_ERR("Failed to initialize manufacturer descriptor (%d)", err);
+		LOG_ERR("Failed to initialize manufacturer descriptor (%d)",
+			err);
 		return NULL;
 	}
 
@@ -107,7 +106,8 @@ static struct usbd_context *usbd_init_device(void)
 	}
 
 	if (usbd_caps_speed(&app_usbd) == USBD_SPEED_HS) {
-		err = usbd_add_configuration(&app_usbd, USBD_SPEED_HS, &app_usb_hs_config);
+		err = usbd_add_configuration(&app_usbd, USBD_SPEED_HS,
+					     &app_usb_hs_config);
 		if (err) {
 			LOG_ERR("Failed to add High-Speed configuration");
 			return NULL;
@@ -122,7 +122,8 @@ static struct usbd_context *usbd_init_device(void)
 		usbd_device_set_code_triple(&app_usbd, USBD_SPEED_HS, 0, 0, 0);
 	}
 
-	err = usbd_add_configuration(&app_usbd, USBD_SPEED_FS, &app_usb_fs_config);
+	err = usbd_add_configuration(&app_usbd, USBD_SPEED_FS,
+				     &app_usb_fs_config);
 	if (err) {
 		LOG_ERR("Failed to add Full-Speed configuration");
 		return NULL;
