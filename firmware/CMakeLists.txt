@@ -13,6 +13,7 @@ project(ec-aic-tester)
 zephyr_include_directories(include)
 
 target_sources(app PRIVATE
+	src/ec.c
 	src/main.c
 	src/usbd.c
 )
