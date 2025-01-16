@@ -106,6 +106,43 @@
 	aic-pins {
 		compatible = "cros,aic-pins";
 		ec-rst-gpios = <&gpioe 3 GPIO_ACTIVE_LOW>;
+		io-gpios = <&gpioc 2 GPIO_ACTIVE_HIGH>, /* CCD_MODE_L */
+			   <&gpioc 4 GPIO_ACTIVE_HIGH>, /* EN_PP5000_FAN */
+			   <&gpioe 13 GPIO_ACTIVE_HIGH>, /* I2C_MECC_PDC4_INT_L */
+
+			   /* TODO: figure out why some signals are not getting
+			    * through on the NPCX AIC board
+			    */
+
+			   /* KSI */
+			   /* <&gpiok 0 GPIO_ACTIVE_HIGH>, */ /* MCU_OUT_KBD_SCANIN_A_ODL */
+			   <&gpiok 1 GPIO_ACTIVE_HIGH>, /* MCU_OUT_KBD_SCANIN_B_ODL */
+			   <&gpiok 2 GPIO_ACTIVE_HIGH>, /* MCU_OUT_KBD_SCANIN_C_ODL */
+			   /* <&gpiok 3 GPIO_ACTIVE_HIGH>, */ /* MCU_OUT_KBD_SCANIN_D_ODL */
+			   <&gpiok 4 GPIO_ACTIVE_HIGH>, /* MCU_OUT_KBD_SCANIN_E_ODL */
+			   <&gpiok 5 GPIO_ACTIVE_HIGH>, /* MCU_OUT_KBD_SCANIN_F_ODL */
+			   <&gpiok 6 GPIO_ACTIVE_HIGH>, /* MCU_OUT_KBD_SCANIN_G_ODL */
+			   <&gpiok 7 GPIO_ACTIVE_HIGH>, /* MCU_OUT_KBD_SCANIN_H_ODL */
+
+			   /* KSO */
+			   /* <&gpioj 0 GPIO_ACTIVE_HIGH>, */ /* MCU_IN_KBD_SCANOUT_A */
+			   /* <&gpioj 1 GPIO_ACTIVE_HIGH>, */ /* MCU_IN_KBD_SCANOUT_B */
+			   <&gpioj 2 GPIO_ACTIVE_HIGH>, /* MCU_IN_KBD_SCANOUT_C */
+			   <&gpioj 3 GPIO_ACTIVE_HIGH>, /* MCU_IN_KBD_SCANOUT_D */
+			   <&gpioj 4 GPIO_ACTIVE_HIGH>, /* MCU_IN_KBD_SCANOUT_E */
+			   <&gpioj 5 GPIO_ACTIVE_HIGH>, /* MCU_IN_KBD_SCANOUT_F */
+			   /* <&gpioj 6 GPIO_ACTIVE_HIGH>, */ /* MCU_IN_KBD_SCANOUT_G */
+			   /* <&gpioj 7 GPIO_ACTIVE_HIGH>, */ /* MCU_IN_KBD_SCANOUT_H */
+			   /* <&gpioj 8 GPIO_ACTIVE_HIGH>, */ /* MCU_IN_KBD_SCANOUT_J */
+			   /* <&gpioj 9 GPIO_ACTIVE_HIGH>, */ /* MCU_IN_KBD_SCANOUT_K */
+			   <&gpioj 10 GPIO_ACTIVE_HIGH>, /* MCU_IN_KBD_SCANOUT_L */
+			   <&gpioj 11 GPIO_ACTIVE_HIGH>, /* MCU_IN_KBD_SCANOUT_M */
+			   <&gpioj 12 GPIO_ACTIVE_HIGH>, /* MCU_IN_KBD_SCANOUT_N */
+			   <&gpioj 13 GPIO_ACTIVE_HIGH>, /* MCU_IN_KBD_SCANOUT_P */
+			   <&gpioj 14 GPIO_ACTIVE_HIGH>, /* MCU_IN_KBD_SCANOUT_Q */
+			   <&gpioj 15 GPIO_ACTIVE_HIGH>; /* MCU_IN_KBD_SCANOUT_R */
+			   /* <&gpioh 3 GPIO_ACTIVE_HIGH>, */ /* MCU_IN_KBD_SCANOUT_S */
+			   /* <&gpioj 4 GPIO_ACTIVE_HIGH>; */ /* MCU_IN_KBD_SCANOUT_T */
 	};
 
 	npcx-boot {

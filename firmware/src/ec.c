@@ -13,6 +13,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/shell/shell.h>
+#include <zephyr/sys/util.h>
 
 LOG_MODULE_REGISTER(ec, LOG_LEVEL_INF);
 
@@ -21,6 +22,9 @@ BUILD_ASSERT(DT_NUM_INST_STATUS_OKAY(DT_DRV_COMPAT) == 1,
 
 static const struct gpio_dt_spec ec_rst_gpio =
 	GPIO_DT_SPEC_INST_GET(0, ec_rst_gpios);
+
+static const struct gpio_dt_spec ec_io_gpio[] = { DT_INST_FOREACH_PROP_ELEM_SEP(
+	0, io_gpios, GPIO_DT_SPEC_GET_BY_IDX, (, )) };
 
 static const struct device *reg_pp3300_mecc_core =
 	DEVICE_DT_GET(DT_NODELABEL(pp3300_mecc_core));
@@ -88,6 +92,75 @@ static void button_input_cb(struct input_event *evt, void *user_data)
 INPUT_CALLBACK_DEFINE(DEVICE_DT_GET(DT_NODELABEL(gpio_keys)), button_input_cb,
 		      NULL);
 
+static int expect_pin(const struct shell *sh, uint8_t i)
+{
+	/* TODO: make it work with more than 32 pins */
+	uint32_t state = 0;
+	uint32_t expect = BIT(i);
+
+	for (uint8_t j = 0; j < ARRAY_SIZE(ec_io_gpio); j++) {
+		const struct gpio_dt_spec *gpio = &ec_io_gpio[j];
+		int val;
+
+		val = gpio_pin_get_dt(gpio);
+		if (val) {
+			state |= BIT(j);
+		}
+	}
+
+	if (state != expect) {
+		shell_print(sh, "unexpected state (%d) %08x != %08x", i, state,
+			    expect);
+		return -1;
+	}
+
+	shell_info(sh, "match state (%d) %08x", i, state);
+	return 0;
+}
+
+#define IO_SWEEP_TIMEOUT_MS 5000
+
+static int cmd_io_sweep(const struct shell *sh, size_t argc, char **argv)
+{
+	uint64_t start_time;
+	int ret;
+
+	for (uint8_t i = 0; i < ARRAY_SIZE(ec_io_gpio); i++) {
+		const struct gpio_dt_spec *gpio = &ec_io_gpio[i];
+
+		ret = gpio_pin_configure_dt(gpio, GPIO_INPUT);
+		if (ret < 0) {
+			LOG_ERR("gpio configuration failed: %d", ret);
+			return ret;
+		}
+	}
+
+	start_time = k_uptime_get();
+	for (uint8_t i = 0; i < ARRAY_SIZE(ec_io_gpio); i++) {
+		while (true) {
+			if (k_uptime_get() - start_time > IO_SWEEP_TIMEOUT_MS) {
+				goto timeout;
+			}
+
+			ret = expect_pin(sh, i);
+			if (ret < 0) {
+				k_sleep(K_MSEC(100));
+				continue;
+			}
+			break;
+		}
+	}
+
+	shell_info(sh, "sweep matched all pins successfully");
+
+	return 0;
+
+timeout:
+	shell_error(sh, "timeout");
+
+	return -ETIME;
+}
+
 void ec_reset(void)
 {
 	gpio_pin_set_dt(&ec_rst_gpio, 1);
@@ -120,10 +193,13 @@ static int cmd_ec_power(const struct shell *sh, size_t argc, char **argv)
 	return 0;
 }
 
-SHELL_STATIC_SUBCMD_SET_CREATE(
-	ec_cmds, SHELL_CMD_ARG(reset, NULL, "reset", cmd_ec_reset, 1, 0),
+/* clang-format off */
+SHELL_STATIC_SUBCMD_SET_CREATE(ec_cmds,
+	SHELL_CMD_ARG(io_sweep, NULL, "io_sweep", cmd_io_sweep, 1, 0),
 	SHELL_CMD_ARG(power, NULL, "power on|off", cmd_ec_power, 2, 0),
+	SHELL_CMD_ARG(reset, NULL, "reset", cmd_ec_reset, 1, 0),
 	SHELL_SUBCMD_SET_END);
+/* clang-format on */
 
 SHELL_CMD_REGISTER(ec, &ec_cmds, "EC control commands", NULL);
 

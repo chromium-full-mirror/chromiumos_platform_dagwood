@@ -11,3 +11,7 @@ properties:
   ec-rst-gpios:
     type: phandle-array
     required: true
+
+  io-gpios:
+    type: phandle-array
+    required: true
