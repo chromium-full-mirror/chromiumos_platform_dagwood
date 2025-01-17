@@ -6,12 +6,14 @@
 #define DT_DRV_COMPAT cros_npcx_boot
 
 #include "ec.h"
+#include "usb_request.h"
 
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/shell/shell.h>
+#include <zephyr/shell/shell_uart.h>
 
 LOG_MODULE_REGISTER(npcx_boot, LOG_LEVEL_INF);
 
@@ -62,3 +64,18 @@ static int cmd_npcx_boot(const struct shell *sh, size_t argc, char **argv)
 }
 
 SHELL_CMD_REGISTER(npcx_boot, NULL, "Enter NPCX bootloader", cmd_npcx_boot);
+
+static void npcx_boot_cb(uint16_t index, uint16_t value)
+{
+	const struct shell *sh = shell_backend_uart_get_ptr();
+
+	if (index != USB_REQ_NPCX_BOOT) {
+		return;
+	}
+
+	LOG_INF("npcx boot");
+
+	cmd_npcx_boot(sh, 0, NULL);
+}
+
+USB_REQUEST_CALLBACK_DEFINE(npcx_boot_cb);

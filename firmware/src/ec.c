@@ -6,6 +6,7 @@
 #define DT_DRV_COMPAT cros_aic_pins
 
 #include "ec.h"
+#include "usb_request.h"
 
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/regulator.h>
@@ -202,6 +203,22 @@ SHELL_STATIC_SUBCMD_SET_CREATE(ec_cmds,
 /* clang-format on */
 
 SHELL_CMD_REGISTER(ec, &ec_cmds, "EC control commands", NULL);
+
+static void ec_cb(uint16_t index, uint16_t value)
+{
+	switch (index) {
+	case USB_REQ_EC_RESET:
+		LOG_INF("usb ec reset");
+		ec_reset();
+		break;
+	case USB_REQ_POWER:
+		LOG_INF("usb ec power %d", value);
+		ec_power(value);
+		break;
+	}
+}
+
+USB_REQUEST_CALLBACK_DEFINE(ec_cb);
 
 static int ec_init(void)
 {

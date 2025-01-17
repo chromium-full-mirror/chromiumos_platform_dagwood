@@ -4,6 +4,7 @@
  */
 
 #include "uart-bridge.h"
+#include "usb_request.h"
 
 #include <zephyr/device.h>
 #include <zephyr/input/input.h>
@@ -34,6 +35,30 @@ USBD_CONFIGURATION_DEFINE(app_usb_fs_config, attributes, USB_MAX_POWER,
 			  &fs_cfg_desc);
 USBD_CONFIGURATION_DEFINE(app_usb_hs_config, attributes, USB_MAX_POWER,
 			  &hs_cfg_desc);
+
+static int to_host_cb(const struct usbd_context *const ctx,
+		      const struct usb_setup_packet *const setup,
+		      struct net_buf *const buf)
+{
+	LOG_INF("%d: %d %d %d %d", setup->RequestType.type, setup->bRequest,
+		setup->wLength, setup->wIndex, setup->wValue);
+
+	return 0;
+}
+
+static int to_dev_cb(const struct usbd_context *const ctx,
+		     const struct usb_setup_packet *const setup,
+		     const struct net_buf *const buf)
+{
+	STRUCT_SECTION_FOREACH(usb_request_callback, callback)
+	{
+		callback->callback(setup->wIndex, setup->wValue);
+	}
+
+	return 0;
+}
+
+USBD_VREQUEST_DEFINE(vnd_vreq, 0, to_host_cb, to_dev_cb);
 
 static void usbd_msg_cb(struct usbd_context *const usbd_ctx,
 			const struct usbd_msg *const msg)
@@ -140,6 +165,12 @@ static struct usbd_context *usbd_init_device(void)
 	err = usbd_msg_register_cb(&app_usbd, usbd_msg_cb);
 	if (err) {
 		LOG_ERR("Failed to register message callback");
+		return NULL;
+	}
+
+	err = usbd_device_register_vreq(&app_usbd, &vnd_vreq);
+	if (err) {
+		LOG_ERR("Failed to register vreq");
 		return NULL;
 	}
 
