@@ -115,6 +115,21 @@
 		pinctrl-1 = <&uart4_rx_pa1>;
 		pinctrl-names = "gpio", "default";
 	};
+
+	i2c-mux-a {
+		compatible = "cros,i2c-mux";
+		en-gpios = <&gpioi 14 GPIO_ACTIVE_HIGH>;
+		a-gpios = <&gpioi 12 GPIO_ACTIVE_HIGH>,
+			  <&gpioi 13 GPIO_ACTIVE_HIGH>;
+		port-count = <4>;
+	};
+
+	i2c-mux-b {
+		compatible = "cros,i2c-mux";
+		en-gpios = <&gpiof 13 GPIO_ACTIVE_HIGH>;
+		a-gpios = <&gpiof 12 GPIO_ACTIVE_HIGH>;
+		port-count = <2>;
+	};
 };
 
 &pinctrl {

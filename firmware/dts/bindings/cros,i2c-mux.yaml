@@ -1,0 +1,24 @@
+# Copyright 2025 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+description: |
+  I2C multiplexer device
+
+compatible: "cros,i2c-mux"
+
+properties:
+  en-gpios:
+    type: phandle-array
+    required: true
+    description: GPIO connected to the enable pin
+
+  a-gpios:
+    type: phandle-array
+    required: true
+    description: GPIOs connected to the A* pins
+
+  port-count:
+    type: int
+    required: true
+    description: Number of ports used in the multiplexer
