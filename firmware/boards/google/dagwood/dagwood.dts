@@ -242,9 +242,11 @@ zephyr_udc0: &usbotg_fs {
 
 	cdc_acm_uart_shell: cdc_acm_uart_shell {
 		compatible = "zephyr,cdc-acm-uart";
+		label = "Dagwood shell";
 	};
 	cdc_acm_uart_ec: cdc_acm_uart_ec {
 		compatible = "zephyr,cdc-acm-uart";
+		label = "EC shell";
 	};
 };
 
