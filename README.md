@@ -1,4 +1,4 @@
-# EC AIC Tester
+# Dagwood
 
 ## Firmware build, flash and debug
 
@@ -20,18 +20,18 @@ Venv setup (only needed once)
 
 ```
 sudo apt install python3-venv
-python3 -m venv ~/chromiumos/src/platform/ec-aic-tester/.venv
+python3 -m venv ~/chromiumos/src/platform/dagwood/.venv
 ```
 
 Enter the venv (once before either setting up or building):
 ```
-source ~/chromiumos/src/platform/ec-aic-tester/.venv/bin/activate
+source ~/chromiumos/src/platform/dagwood/.venv/bin/activate
 ```
 
 Initialize the project modules and install dependencies (only needed once):
 
 ```
-cd ~/chromiumos/src/platform/ec-aic-tester
+cd ~/chromiumos/src/platform/dagwood
 pip install west
 unset ZEPHYR_BASE # only needed if there's other Zephyr checkouts in the system
 west init -l firmware
@@ -44,7 +44,7 @@ sudo apt install cmake ninja-build ccache dfu-util
 Build and flash:
 
 ```
-cd ~/chromiumos/src/platform/ec-aic-tester
+cd ~/chromiumos/src/platform/dagwood
 west update # only needed if there was a breaking change in the modules
 west build firmware
 west flash
@@ -54,9 +54,9 @@ west flash
 
 It's possible to build, flash and debug the firmware without the whole
 chromiumos checkout, in that case just pick an arbitrary directory as a
-workspace instead of `~/chromiumos/src/platform/ec-aic-tester` and initialize
+workspace instead of `~/chromiumos/src/platform/dagwood` and initialize
 it with `west init --mf firmware/west.yml -m
-https://chromium.googlesource.com/chromiumos/platform/ec-aic-tester`, the rest
+https://chromium.googlesource.com/chromiumos/platform/dagwood`, the rest
 of the process it the same.
 
 This setup takes less disk space, but results in a checkout with no tools to

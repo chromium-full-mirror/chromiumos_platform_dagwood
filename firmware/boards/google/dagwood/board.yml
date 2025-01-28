@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 board:
-  name: ec_aic_tester
-  full_name: EC AIC Tester
+  name: dagwood
+  full_name: Dagwood
   vendor: google
   socs:
     - name: stm32h743xx

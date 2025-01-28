@@ -10,7 +10,7 @@
 
 / {
 	model = "Google EC AIC Tester";
-	compatible = "google,ec-aic-tester";
+	compatible = "google,dagwood";
 
 	chosen {
 		/* change to &usart1 to move the shell to J3/J4 */
