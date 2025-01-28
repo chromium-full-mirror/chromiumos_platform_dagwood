@@ -165,3 +165,14 @@ uartupdatetool --port=ttyACM1 --baudrate=115200 --opr=wr --addr=0x200C3020 --fil
 uartupdatetool --port=ttyACM1 --baudrate=115200 --opr=wr --auto --offset=0 --file build/zephyr/npcx-aic/output/ec.bin
 # reset the ec (ec reset)
 ```
+
+## Persistent serial port path
+
+The project uses a pair of standard USB CDC-ACM interfaces for the main board
+and AIC board shell. These can be mapped to a persistent path using the
+following udev rules (add them on a file in `/etc/udev/rules.d/`):
+
+```
+SUBSYSTEM=="tty", ACTION=="add", ATTRS{interface}=="Dagwood shell", SYMLINK+="tty-dw-shell"
+SUBSYSTEM=="tty", ACTION=="add", ATTRS{interface}=="EC shell", SYMLINK+="tty-ec-shell"
+```
