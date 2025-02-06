@@ -16,7 +16,7 @@ target = None
 
 
 def find_usb_device():
-    dev = usb.core.find(manufacturer="Google", product="EC AIC Tester")
+    dev = usb.core.find(manufacturer="Google", product="Dagwood")
     if dev is None:
         raise ValueError("Device not found")
 

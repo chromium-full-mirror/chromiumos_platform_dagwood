@@ -16,7 +16,7 @@ LOG_MODULE_REGISTER(usbd_app, LOG_LEVEL_INF);
 #define USB_VID 0x18d1
 #define USB_PID 0x5214
 #define USB_MANUFACTURER_NAME "Google"
-#define USB_DEVICE_NAME "EC AIC Tester"
+#define USB_DEVICE_NAME "Dagwood"
 #define USB_MAX_POWER 250
 
 USBD_DEVICE_DEFINE(app_usbd, DEVICE_DT_GET(DT_NODELABEL(zephyr_udc0)), USB_VID,
