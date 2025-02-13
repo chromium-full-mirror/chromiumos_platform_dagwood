@@ -25,10 +25,7 @@ description: |
 
 compatible: "zephyr,uart-bridge"
 
-child-binding:
-  description: Peer device node
-  properties:
-    device:
-      type: phandle
-      description: |
-        Phandle of a serial device.
+properties:
+  peers:
+    type: phandles
+    description: Peer device nodes, must contain two phandles

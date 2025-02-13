@@ -45,12 +45,7 @@
 
 	uart_bridge: uart-bridge {
 		compatible = "zephyr,uart-bridge";
-		usb {
-			device = <&cdc_acm_uart_ec>;
-		};
-		uart {
-			device = <&uart4>;
-		};
+		peers = <&cdc_acm_uart_ec &uart4>;
 	};
 
 	pp3300_mecc_core: pp3300_mecc_core {

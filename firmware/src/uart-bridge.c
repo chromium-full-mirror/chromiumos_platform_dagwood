@@ -17,12 +17,8 @@ LOG_MODULE_REGISTER(uart_bridge, LOG_LEVEL_INF);
 #define RING_BUF_SIZE 256
 #define RING_BUF_FULL_THRESHOLD (RING_BUF_SIZE / 3)
 
-struct uart_bridge_peer_config {
-	const struct device *dev;
-};
-
 struct uart_bridge_config {
-	struct uart_bridge_peer_config peer[2];
+	const struct device *peer_dev[2];
 };
 
 struct uart_bridge_peer_data {
@@ -40,10 +36,10 @@ uart_bridge_get_peer(const struct device *dev, const struct device *bridge_dev)
 {
 	const struct uart_bridge_config *cfg = bridge_dev->config;
 
-	if (dev == cfg->peer[0].dev) {
-		return cfg->peer[1].dev;
-	} else if (dev == cfg->peer[1].dev) {
-		return cfg->peer[0].dev;
+	if (dev == cfg->peer_dev[0]) {
+		return cfg->peer_dev[1];
+	} else if (dev == cfg->peer_dev[1]) {
+		return cfg->peer_dev[0];
 	} else {
 		return NULL;
 	}
@@ -87,7 +83,7 @@ static uint8_t uart_bridge_get_idx(const struct device *dev,
 {
 	const struct uart_bridge_config *cfg = bridge_dev->config;
 
-	if (dev == cfg->peer[0].dev) {
+	if (dev == cfg->peer_dev[0]) {
 		return own ? 0 : 1;
 	} else {
 		return own ? 1 : 0;
@@ -100,8 +96,8 @@ static void uart_bridge_handle_rx(const struct device *dev,
 	const struct uart_bridge_config *cfg = bridge_dev->config;
 	struct uart_bridge_data *data = bridge_dev->data;
 
-	const struct uart_bridge_peer_config *peer_cfg =
-		&cfg->peer[uart_bridge_get_idx(dev, bridge_dev, false)];
+	const struct device *peer_dev =
+		cfg->peer_dev[uart_bridge_get_idx(dev, bridge_dev, false)];
 	struct uart_bridge_peer_data *own_data =
 		&data->peer[uart_bridge_get_idx(dev, bridge_dev, true)];
 
@@ -135,7 +131,7 @@ static void uart_bridge_handle_rx(const struct device *dev,
 		return;
 	}
 
-	uart_irq_tx_enable(peer_cfg->dev);
+	uart_irq_tx_enable(peer_dev);
 }
 
 static void uart_bridge_handle_tx(const struct device *dev,
@@ -144,8 +140,8 @@ static void uart_bridge_handle_tx(const struct device *dev,
 	const struct uart_bridge_config *cfg = bridge_dev->config;
 	struct uart_bridge_data *data = bridge_dev->data;
 
-	const struct uart_bridge_peer_config *peer_cfg =
-		&cfg->peer[uart_bridge_get_idx(dev, bridge_dev, false)];
+	const struct device *peer_dev =
+		cfg->peer_dev[uart_bridge_get_idx(dev, bridge_dev, false)];
 	struct uart_bridge_peer_data *peer_data =
 		&data->peer[uart_bridge_get_idx(dev, bridge_dev, false)];
 
@@ -176,7 +172,7 @@ static void uart_bridge_handle_tx(const struct device *dev,
 	if (peer_data->paused &&
 	    ring_buf_space_get(&peer_data->rb) > RING_BUF_FULL_THRESHOLD) {
 		LOG_DBG("%s: buffer free: resume", dev->name);
-		uart_irq_rx_enable(peer_cfg->dev);
+		uart_irq_rx_enable(peer_dev);
 		peer_data->paused = false;
 		return;
 	}
@@ -207,28 +203,23 @@ static int uart_bridge_init(const struct device *dev)
 	/* Wait 100ms for the host to do all settings */
 	k_msleep(100);
 
-	uart_irq_callback_user_data_set(cfg->peer[0].dev, interrupt_handler,
+	uart_irq_callback_user_data_set(cfg->peer_dev[0], interrupt_handler,
 					(void *)dev);
-	uart_irq_callback_user_data_set(cfg->peer[1].dev, interrupt_handler,
+	uart_irq_callback_user_data_set(cfg->peer_dev[1], interrupt_handler,
 					(void *)dev);
-	uart_irq_rx_enable(cfg->peer[0].dev);
-	uart_irq_rx_enable(cfg->peer[1].dev);
+	uart_irq_rx_enable(cfg->peer_dev[0]);
+	uart_irq_rx_enable(cfg->peer_dev[1]);
 
 	return 0;
 }
 
-#define UART_BRIDGE_PEER_DEFINE(node_id)                           \
-	{                                                          \
-		.dev = DEVICE_DT_GET(DT_PHANDLE(node_id, device)), \
-	}
-
 #define UART_BRIDGE_INIT(n)                                                \
-	BUILD_ASSERT(DT_INST_CHILD_NUM(n) == 2,                            \
+	BUILD_ASSERT(DT_INST_PROP_LEN(n, peers) == 2,                      \
 		     "uart-bridge must have exactly 2 child nodes");       \
                                                                            \
 	static const struct uart_bridge_config uart_bridge_cfg_##n = {     \
-		.peer = { DT_INST_FOREACH_CHILD_STATUS_OKAY_SEP(           \
-			n, UART_BRIDGE_PEER_DEFINE, (, )) },               \
+		.peer_dev = { DT_INST_FOREACH_PROP_ELEM_SEP(               \
+			n, peers, DEVICE_DT_GET_BY_IDX, (, )) },           \
 	};                                                                 \
                                                                            \
 	static struct uart_bridge_data uart_bridge_data_##n;               \
