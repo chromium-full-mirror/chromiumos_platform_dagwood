@@ -3,7 +3,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import serial.tools.list_ports
 import usb
+
+
+DAGWOOD_PORT_INFO = "Dagwood - Dagwood shell"
+DAGWOOD_EC_PORT_INFO = "Dagwood - EC shell"
+
+
+def find_default_ec_port():
+    for port in serial.tools.list_ports.comports():
+        if port.usb_description() == DAGWOOD_EC_PORT_INFO:
+            return port.device
+
+    # Fallback to ttyACM1, should be correct if there's no other ACM devices.
+    return "/dev/ttyACM1"
 
 
 def find_usb_device():

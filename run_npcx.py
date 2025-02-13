@@ -26,7 +26,9 @@ def main(argv):
     global target
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--port", type=str, default="ttyACM1")
+    parser.add_argument(
+        "-p", "--port", type=str, default=utils.find_default_ec_port()
+    )
     parser.add_argument("-b", "--board", type=str, required=True)
     args = parser.parse_args(argv)
 
@@ -62,19 +64,21 @@ def main(argv):
     utils.dw_req_power(dev, True)
     utils.dw_req_npcx_boot(dev)
 
+    port_base = os.path.basename(args.port)
+
     # Load the monitor code
     os.system(
-        f"{utils.UUT} --port={args.port} --baudrate=115200 --opr=wr --addr=0x200C3020 --file {monitor_file}"
+        f"{utils.UUT} --port={port_base} --baudrate=115200 --opr=wr --addr=0x200C3020 --file {monitor_file}"
     )
 
     # Load the binary file directly to RAM
     os.system(
-        f"{utils.UUT} --port={args.port} --baudrate=115200 --opr=wr --addr={rom_start} --file {bin_file}"
+        f"{utils.UUT} --port={port_base} --baudrate=115200 --opr=wr --addr={rom_start} --file {bin_file}"
     )
 
     # Jump to the entry point in RAM
     os.system(
-        f"{utils.UUT} --port={args.port} --baudrate=115200 --opr=go --addr={entry}"
+        f"{utils.UUT} --port={port_base} --baudrate=115200 --opr=go --addr={entry}"
     )
 
 

@@ -20,7 +20,9 @@ def main(argv):
     global target
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--port", type=str, default="ttyACM2")
+    parser.add_argument(
+        "-p", "--port", type=str, default=utils.find_default_ec_port()
+    )
     args = parser.parse_args(argv)
 
     dev = utils.find_usb_device()
@@ -28,11 +30,13 @@ def main(argv):
     utils.dw_req_power(dev, True)
     utils.dw_req_npcx_boot(dev)
 
+    port_base = os.path.basename(args.port)
+
     os.system(
-        f"{utils.UUT} --port={args.port} --baudrate=115200 --opr=wr --addr=0x200C3020 --file build/zephyr/npcx-aic/output/npcx_monitor.bin"
+        f"{utils.UUT} --port={port_base} --baudrate=115200 --opr=wr --addr=0x200C3020 --file build/zephyr/npcx-aic/output/npcx_monitor.bin"
     )
     os.system(
-        f"{utils.UUT} --port={args.port} --baudrate=115200 --opr=wr --auto --offset=0 --file build/zephyr/npcx-aic/output/ec.bin"
+        f"{utils.UUT} --port={port_base} --baudrate=115200 --opr=wr --auto --offset=0 --file build/zephyr/npcx-aic/output/ec.bin"
     )
 
     utils.dw_ec_reset(dev)
