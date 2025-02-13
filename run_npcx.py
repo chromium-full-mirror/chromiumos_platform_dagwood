@@ -13,37 +13,12 @@ import sys
 # pylint: disable=import-error
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
-import usb
+
+import utils
 
 
 args = None
 target = None
-
-
-def find_usb_device():
-    dev = usb.core.find(manufacturer="Google", product="Dagwood")
-    if dev is None:
-        raise ValueError("Device not found")
-
-    return dev
-
-
-# bRequest values:
-# bit 7 = 0: host to device
-# bit 6..5 = vendor
-# bit 4..0 = device
-TO_DEV_REQ_TYPE = 0x40
-# bit 7 = 0: device to host
-# bit 6..5 = vendor
-# bit 4..0 = device
-TO_HOST_REQ_TYPE = 0xC0
-
-# Must match the definitions in firmware/src/usb_request.h
-USB_REQ_EC_RESET = 0
-USB_REQ_POWER = 1
-USB_REQ_NPCX_BOOT = 2
-
-UUT = "uartupdatetool"
 
 
 def main(argv):
@@ -82,25 +57,24 @@ def main(argv):
     print(f"Entry point: {entry}")
     print(f"ROM start {rom_start}")
 
-    dev = find_usb_device()
+    dev = utils.find_usb_device()
 
-    dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, 1, USB_REQ_POWER, 0)
-
-    dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, 0, USB_REQ_NPCX_BOOT, 0)
+    utils.dw_req_power(dev, True)
+    utils.dw_req_npcx_boot(dev)
 
     # Load the monitor code
     os.system(
-        f"{UUT} --port={args.port} --baudrate=115200 --opr=wr --addr=0x200C3020 --file {monitor_file}"
+        f"{utils.UUT} --port={args.port} --baudrate=115200 --opr=wr --addr=0x200C3020 --file {monitor_file}"
     )
 
     # Load the binary file directly to RAM
     os.system(
-        f"{UUT} --port={args.port} --baudrate=115200 --opr=wr --addr={rom_start} --file {bin_file}"
+        f"{utils.UUT} --port={args.port} --baudrate=115200 --opr=wr --addr={rom_start} --file {bin_file}"
     )
 
     # Jump to the entry point in RAM
     os.system(
-        f"{UUT} --port={args.port} --baudrate=115200 --opr=go --addr={entry}"
+        f"{utils.UUT} --port={args.port} --baudrate=115200 --opr=go --addr={entry}"
     )
 
 

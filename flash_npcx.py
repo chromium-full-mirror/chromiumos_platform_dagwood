@@ -8,35 +8,11 @@ import os
 import sys
 import time
 
-import usb
+import utils
 
 
 args = None
 target = None
-
-
-def find_usb_device():
-    dev = usb.core.find(manufacturer="Google", product="Dagwood")
-    if dev is None:
-        raise ValueError("Device not found")
-
-    return dev
-
-
-# bRequest values:
-# bit 7 = 0: host to device
-# bit 6..5 = vendor
-# bit 4..0 = device
-TO_DEV_REQ_TYPE = 0x40
-# bit 7 = 0: device to host
-# bit 6..5 = vendor
-# bit 4..0 = device
-TO_HOST_REQ_TYPE = 0xC0
-
-# Must match the definitions in firmware/src/usb_request.h
-USB_REQ_EC_RESET = 0
-USB_REQ_POWER = 1
-USB_REQ_NPCX_BOOT = 2
 
 
 def main(argv):
@@ -47,20 +23,19 @@ def main(argv):
     parser.add_argument("-p", "--port", type=str, default="ttyACM2")
     args = parser.parse_args(argv)
 
-    dev = find_usb_device()
+    dev = utils.find_usb_device()
 
-    dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, 1, USB_REQ_POWER, 0)
-
-    dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, 0, USB_REQ_NPCX_BOOT, 0)
+    utils.dw_req_power(dev, True)
+    utils.dw_req_npcx_boot(dev)
 
     os.system(
-        f"uartupdatetool --port={args.port} --baudrate=115200 --opr=wr --addr=0x200C3020 --file build/zephyr/npcx-aic/output/npcx_monitor.bin"
+        f"{utils.UUT} --port={args.port} --baudrate=115200 --opr=wr --addr=0x200C3020 --file build/zephyr/npcx-aic/output/npcx_monitor.bin"
     )
     os.system(
-        f"uartupdatetool --port={args.port} --baudrate=115200 --opr=wr --auto --offset=0 --file build/zephyr/npcx-aic/output/ec.bin"
+        f"{utils.UUT} --port={args.port} --baudrate=115200 --opr=wr --auto --offset=0 --file build/zephyr/npcx-aic/output/ec.bin"
     )
 
-    dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, 0, USB_REQ_EC_RESET, 0)
+    utils.dw_ec_reset(dev)
 
 
 if __name__ == "__main__":
