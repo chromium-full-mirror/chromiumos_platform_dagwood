@@ -32,9 +32,3 @@ child-binding:
       type: phandle
       description: |
         Phandle of a serial device.
-
-    transfer-size:
-      type: int
-      description: |
-        The maximum number of bytes to try and transfer to the device in one
-        go.

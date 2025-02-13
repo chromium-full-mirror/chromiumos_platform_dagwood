@@ -19,7 +19,6 @@ LOG_MODULE_REGISTER(uart_bridge, LOG_LEVEL_INF);
 
 struct uart_bridge_peer_config {
 	const struct device *dev;
-	size_t transfer_size;
 };
 
 struct uart_bridge_config {
@@ -101,15 +100,14 @@ static void uart_bridge_handle_rx(const struct device *dev,
 	const struct uart_bridge_config *cfg = bridge_dev->config;
 	struct uart_bridge_data *data = bridge_dev->data;
 
-	const struct uart_bridge_peer_config *own_cfg =
-		&cfg->peer[uart_bridge_get_idx(dev, bridge_dev, true)];
 	const struct uart_bridge_peer_config *peer_cfg =
 		&cfg->peer[uart_bridge_get_idx(dev, bridge_dev, false)];
 	struct uart_bridge_peer_data *own_data =
 		&data->peer[uart_bridge_get_idx(dev, bridge_dev, true)];
 
-	uint8_t buffer[own_cfg->transfer_size];
+	uint8_t *recv_buf;
 	int rb_len, recv_len;
+	int ret;
 
 	if (ring_buf_space_get(&own_data->rb) < RING_BUF_FULL_THRESHOLD) {
 		LOG_DBG("%s: buffer full: pause", dev->name);
@@ -118,13 +116,23 @@ static void uart_bridge_handle_rx(const struct device *dev,
 		return;
 	}
 
-	recv_len = uart_fifo_read(dev, buffer, sizeof(buffer));
-	if (!recv_len)
+	rb_len = ring_buf_put_claim(&own_data->rb, &recv_buf, RING_BUF_SIZE);
+	if (rb_len == 0) {
+		LOG_WRN("%s: ring_buf full", dev->name);
 		return;
+	}
 
-	rb_len = ring_buf_put(&own_data->rb, buffer, recv_len);
-	if (rb_len < recv_len) {
-		LOG_WRN("%s: rx drop %u bytes", dev->name, recv_len - rb_len);
+	recv_len = uart_fifo_read(dev, recv_buf, rb_len);
+	if (recv_len < 0) {
+		ring_buf_put_finish(&own_data->rb, 0);
+		LOG_ERR("%s: rx error: %d", dev->name, recv_len);
+		return;
+	}
+
+	ret = ring_buf_put_finish(&own_data->rb, recv_len);
+	if (ret < 0) {
+		LOG_ERR("%s: ring_buf_put_finish error: %d", dev->name, rb_len);
+		return;
 	}
 
 	uart_irq_tx_enable(peer_cfg->dev);
@@ -136,27 +144,33 @@ static void uart_bridge_handle_tx(const struct device *dev,
 	const struct uart_bridge_config *cfg = bridge_dev->config;
 	struct uart_bridge_data *data = bridge_dev->data;
 
-	const struct uart_bridge_peer_config *own_cfg =
-		&cfg->peer[uart_bridge_get_idx(dev, bridge_dev, true)];
 	const struct uart_bridge_peer_config *peer_cfg =
 		&cfg->peer[uart_bridge_get_idx(dev, bridge_dev, false)];
 	struct uart_bridge_peer_data *peer_data =
 		&data->peer[uart_bridge_get_idx(dev, bridge_dev, false)];
 
-	uint8_t buffer[own_cfg->transfer_size];
-	int rb_len, send_len;
+	uint8_t *send_buf;
+	int rb_len, sent_len;
+	int ret;
 
-	rb_len = ring_buf_get(&peer_data->rb, buffer, sizeof(buffer));
-	if (!rb_len) {
+	rb_len = ring_buf_get_claim(&peer_data->rb, &send_buf, RING_BUF_SIZE);
+	if (rb_len == 0) {
 		LOG_DBG("%s: buffer empty, disable tx irq", dev->name);
 		uart_irq_tx_disable(dev);
 		return;
 	}
 
-	send_len = uart_fifo_fill(dev, buffer, rb_len);
-	if (send_len < rb_len) {
-		LOG_WRN("%s: tx dropped %d bytes", dev->name,
-			rb_len - send_len);
+	sent_len = uart_fifo_fill(dev, send_buf, rb_len);
+	if (sent_len < 0) {
+		ring_buf_get_finish(&peer_data->rb, 0);
+		LOG_ERR("%s: tx error: %d", dev->name, sent_len);
+		return;
+	}
+
+	ret = ring_buf_get_finish(&peer_data->rb, sent_len);
+	if (ret < 0) {
+		LOG_ERR("ring_buf_get_finish error: %d", ret);
+		return;
 	}
 
 	if (peer_data->paused &&
@@ -206,7 +220,6 @@ static int uart_bridge_init(const struct device *dev)
 #define UART_BRIDGE_PEER_DEFINE(node_id)                           \
 	{                                                          \
 		.dev = DEVICE_DT_GET(DT_PHANDLE(node_id, device)), \
-		.transfer_size = DT_PROP(node_id, transfer_size),  \
 	}
 
 #define UART_BRIDGE_INIT(n)                                                \

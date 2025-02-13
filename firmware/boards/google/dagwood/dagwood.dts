@@ -47,11 +47,9 @@
 		compatible = "zephyr,uart-bridge";
 		usb {
 			device = <&cdc_acm_uart_ec>;
-			transfer-size = <64>;
 		};
 		uart {
 			device = <&uart4>;
-			transfer-size = <1>;
 		};
 	};
 
