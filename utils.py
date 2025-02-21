@@ -46,6 +46,9 @@ USB_REQ_NPCX_BOOT = 2
 # NPXC uartupdatetool name
 UUT = "uartupdatetool"
 
+# ITE UART update tool name
+ITEFLASH = "itecomdbgr"
+
 
 def dw_req_power(dev, enable):
     """Control the EC board power"""
