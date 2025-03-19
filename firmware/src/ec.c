@@ -48,6 +48,10 @@ static bool ec_power_enabled;
 
 static void ec_power(bool enable)
 {
+	if (ec_power_enabled == enable) {
+		return;
+	}
+
 	if (enable) {
 		regulator_enable(reg_pp3300_mecc_core);
 		regulator_enable(reg_pp3300_mecc_z);
