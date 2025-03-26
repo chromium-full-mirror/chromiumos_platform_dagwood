@@ -8,7 +8,13 @@ includes the necessary configuration to upload changes to Gerrit.
 
 ### Chroot build
 
-TODO
+```
+./build_from_chroot.py
+```
+
+The script is also used to flash the image by specifying the `-f` flag, only
+`dfu-util` is supported. For other flashing tools and source level debugging
+use the non chroot west build.
 
 ### Out of chroot build
 
