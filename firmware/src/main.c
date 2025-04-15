@@ -23,3 +23,21 @@ int main(void)
 		k_sleep(K_MSEC(1000));
 	}
 }
+
+/* JLink seems to have issues flashing a board when it boots cleanly from
+ * power-on and has never been flashed, holding the reset button by hand while
+ * running "west flash" seems to temporarily fix the problem, the JLink does
+ * reset the MCU while connecting so this seems some race condition in the CPU
+ * boot process.
+ *
+ * Adding a short delay after sys_clock_driver_init(), which runs in
+ * PRE_KERNEL_2 seems to work around the problem.
+ */
+static int jlink_helper_hack(void)
+{
+	k_busy_wait(100 * USEC_PER_MSEC);
+
+	return 0;
+}
+
+SYS_INIT(jlink_helper_hack, PRE_KERNEL_2, 99);
