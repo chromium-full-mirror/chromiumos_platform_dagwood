@@ -3,10 +3,10 @@
  * found in the LICENSE file.
  */
 
-#include "uart-bridge.h"
 #include "usb_request.h"
 
 #include <zephyr/device.h>
+#include <zephyr/drivers/uart/uart_bridge.h>
 #include <zephyr/input/input.h>
 #include <zephyr/kernel.h>
 #include <zephyr/usb/usbd.h>
