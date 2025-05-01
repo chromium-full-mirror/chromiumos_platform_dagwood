@@ -53,6 +53,9 @@ UUT = "uartupdatetool"
 # ITE UART update tool name
 ITEFLASH = "itecomdbgr"
 
+# Realtek UART update tool name
+RTKFLASH = "rtkupdate"
+
 
 def dw_req_power(dev, enable):
     """Control the EC board power"""
