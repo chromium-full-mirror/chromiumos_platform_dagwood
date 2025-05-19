@@ -14,11 +14,11 @@ manifest:
       revision: main
       west-commands: scripts/west-commands.yml
 
-    - name: cmsis
+    - name: cmsis_6
       remote: chromium
-      repo-path: third_party/zephyr/cmsis
+      repo-path: third_party/zephyr/cmsis_6
       revision: chromeos-main
-      path: modules/hal/cmsis
+      path: modules/hal/cmsis_6
 
     - name: hal_stm32
       remote: chromium

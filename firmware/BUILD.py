@@ -7,6 +7,6 @@
 register_raw_project(
     project_name="dagwood",
     zephyr_board="dagwood",
-    modules=["hal_stm32", "cmsis"],
+    modules=["hal_stm32", "cmsis", "cmsis_6"],
     supported_toolchains=["coreboot-sdk", "zephyr"],
 )
