@@ -45,7 +45,14 @@
 
 	uart_bridge: uart-bridge {
 		compatible = "zephyr,uart-bridge";
+		zephyr,pm-device-runtime-auto;
 		peers = <&cdc_acm_uart_ec &uart4>;
+	};
+
+	uart_bridge_alt: uart-bridge-alt {
+		compatible = "zephyr,uart-bridge";
+		zephyr,pm-device-runtime-auto;
+		peers = <&cdc_acm_uart_ec_alt &uart4>;
 	};
 
 	pp3300_mecc_core: pp3300_mecc_core {
@@ -240,6 +247,10 @@ zephyr_udc0: &usbotg_fs {
 	cdc_acm_uart_ec: cdc_acm_uart_ec {
 		compatible = "zephyr,cdc-acm-uart";
 		label = "EC shell";
+	};
+	cdc_acm_uart_ec_alt: cdc_acm_uart_ec_alt {
+		compatible = "zephyr,cdc-acm-uart";
+		label = "EC UART programming";
 	};
 };
 

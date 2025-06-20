@@ -9,6 +9,7 @@
 #include <zephyr/drivers/uart/uart_bridge.h>
 #include <zephyr/input/input.h>
 #include <zephyr/kernel.h>
+#include <zephyr/pm/device_runtime.h>
 #include <zephyr/usb/usbd.h>
 
 LOG_MODULE_REGISTER(usbd_app, LOG_LEVEL_INF);
@@ -60,6 +61,16 @@ static int to_dev_cb(const struct usbd_context *const ctx,
 
 USBD_VREQUEST_DEFINE(vnd_vreq, 0, to_host_cb, to_dev_cb);
 
+static void update_bridge_settings_if_active(const struct device *dev,
+					     const struct device *bridge_dev)
+{
+	if (pm_device_runtime_usage(bridge_dev) <= 0) {
+		return;
+	}
+
+	uart_bridge_settings_update(dev, bridge_dev);
+}
+
 static void usbd_msg_cb(struct usbd_context *const usbd_ctx,
 			const struct usbd_msg *const msg)
 {
@@ -69,8 +80,10 @@ static void usbd_msg_cb(struct usbd_context *const usbd_ctx,
 
 	if (msg->type == USBD_MSG_CDC_ACM_LINE_CODING ||
 	    msg->type == USBD_MSG_CDC_ACM_CONTROL_LINE_STATE) {
-		uart_bridge_settings_update(
+		update_bridge_settings_if_active(
 			msg->dev, DEVICE_DT_GET(DT_NODELABEL(uart_bridge)));
+		update_bridge_settings_if_active(
+			msg->dev, DEVICE_DT_GET(DT_NODELABEL(uart_bridge_alt)));
 	}
 
 	if (!usbd_can_detect_vbus(usbd_ctx)) {

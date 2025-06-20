@@ -6,6 +6,7 @@
 #include <zephyr/drivers/led.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/pm/device_runtime.h>
 #include <zephyr/shell/shell.h>
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
@@ -14,6 +15,20 @@ const struct led_dt_spec status_led = LED_DT_SPEC_GET(DT_NODELABEL(status_led));
 
 int main(void)
 {
+	int ret;
+
+	ret = pm_device_runtime_get(DEVICE_DT_GET(DT_NODELABEL(gpio_keys)));
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_get error: %d", ret);
+		return ret;
+	}
+
+	ret = pm_device_runtime_get(DEVICE_DT_GET(DT_NODELABEL(uart_bridge)));
+	if (ret < 0) {
+		LOG_ERR("pm_device_runtime_get error: %d", ret);
+		return ret;
+	}
+
 	LOG_INF("started");
 
 	while (true) {
