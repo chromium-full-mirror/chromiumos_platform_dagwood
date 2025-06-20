@@ -23,12 +23,6 @@ int main(void)
 		return ret;
 	}
 
-	ret = pm_device_runtime_get(DEVICE_DT_GET(DT_NODELABEL(uart_bridge)));
-	if (ret < 0) {
-		LOG_ERR("pm_device_runtime_get error: %d", ret);
-		return ret;
-	}
-
 	LOG_INF("started");
 
 	while (true) {
