@@ -35,6 +35,7 @@ def main(argv):
     dev = utils.find_usb_device()
 
     utils.dw_req_power(dev, True)
+    utils.dw_ec_uart_select_alt(dev, True)
     utils.dw_req_npcx_boot(dev)
 
     port_base = os.path.basename(args.port)
@@ -46,6 +47,7 @@ def main(argv):
         f"{utils.UUT} --port={port_base} --baudrate=115200 --opr=wr --auto --offset=0 --file {bin_file}"
     )
 
+    utils.dw_ec_uart_select_alt(dev, False)
     utils.dw_ec_reset(dev)
 
 

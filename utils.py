@@ -9,11 +9,12 @@ import usb
 
 DAGWOOD_PORT_INFO = "Dagwood - Dagwood shell"
 DAGWOOD_EC_PORT_INFO = "Dagwood - EC shell"
+DAGWOOD_EC_ALT_PORT_INFO = "Dagwood - EC UART programming"
 
 
 def find_default_ec_port():
     for port in serial.tools.list_ports.comports():
-        if port.usb_description() == DAGWOOD_EC_PORT_INFO:
+        if port.usb_description() == DAGWOOD_EC_ALT_PORT_INFO:
             return port.device
 
     # Fallback to ttyACM1, should be correct if there's no other ACM devices.
@@ -42,6 +43,7 @@ TO_HOST_REQ_TYPE = 0xC0
 USB_REQ_EC_RESET = 0
 USB_REQ_POWER = 1
 USB_REQ_NPCX_BOOT = 2
+USB_REQ_EC_UART_SELECT = 3
 
 # NPXC uartupdatetool name
 UUT = "uartupdatetool"
@@ -68,3 +70,12 @@ def dw_ec_reset(dev):
 def dw_req_npcx_boot(dev):
     """Put an NPCX EC board in boot mode"""
     dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, 0, USB_REQ_NPCX_BOOT, 0)
+
+
+def dw_ec_uart_select_alt(dev, enable):
+    if enable:
+        value = 1
+    else:
+        value = 0
+
+    dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, value, USB_REQ_EC_UART_SELECT, 0)
