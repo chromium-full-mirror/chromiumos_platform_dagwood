@@ -133,8 +133,8 @@ static int i2c_mux_init(const struct device *dev)
 		.port_count = DT_INST_PROP(n, port_count),                   \
 	};                                                                   \
                                                                              \
-	DEVICE_DT_INST_DEFINE(n, i2c_mux_init, NULL(n), NULL,                \
-			      &i2c_mux_cfg_##n, POST_KERNEL,                 \
-			      CONFIG_I2C_INIT_PRIORITY, &i2c_mux_api);
+	DEVICE_DT_INST_DEFINE(n, i2c_mux_init, NULL, NULL, &i2c_mux_cfg_##n, \
+			      POST_KERNEL, CONFIG_I2C_INIT_PRIORITY,         \
+			      &i2c_mux_api);
 
 DT_INST_FOREACH_STATUS_OKAY(I2C_MUX_INIT)
