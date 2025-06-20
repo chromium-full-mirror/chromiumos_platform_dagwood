@@ -280,7 +280,7 @@ zephyr_udc0: &usbotg_fs {
 };
 
 /* connected to J5, QWIIC port */
-&i2c3 {
+zephyr_i2c: &i2c3 {
 	pinctrl-0 = <&i2c3_scl_ph7 &i2c3_sda_ph8>;
 	pinctrl-names = "default";
 	status = "okay";
