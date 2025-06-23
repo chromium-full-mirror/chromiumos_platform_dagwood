@@ -252,7 +252,8 @@ zephyr_udc0: &usbotg_fs {
 /* target interface, connected to the U9 mux */
 &i2c2 {
 	pinctrl-0 = <&i2c2_scl_pf1 &i2c2_sda_pf0>;
-	pinctrl-names = "default";
+	pinctrl-1 = <&analog_pf1 &analog_pf0>;
+	pinctrl-names = "default", "sleep";
 	status = "okay";
 	clock-frequency = <I2C_BITRATE_STANDARD>;
 
@@ -267,7 +268,8 @@ zephyr_udc0: &usbotg_fs {
 /* target interface, connected to the U11 mux */
 &i2c4 {
 	pinctrl-0 = <&i2c4_scl_pf14 &i2c4_sda_pf15>;
-	pinctrl-names = "default";
+	pinctrl-1 = <&analog_pf14 &analog_pf15>;
+	pinctrl-names = "default", "sleep";
 	status = "okay";
 	clock-frequency = <I2C_BITRATE_STANDARD>;
 
@@ -282,7 +284,8 @@ zephyr_udc0: &usbotg_fs {
 /* connected to J5, QWIIC port */
 zephyr_i2c: &i2c3 {
 	pinctrl-0 = <&i2c3_scl_ph7 &i2c3_sda_ph8>;
-	pinctrl-names = "default";
+	pinctrl-1 = <&analog_ph7 &analog_ph8>;
+	pinctrl-names = "default", "sleep";
 	status = "okay";
 	clock-frequency = <I2C_BITRATE_FAST>;
 };
