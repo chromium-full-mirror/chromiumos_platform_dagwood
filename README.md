@@ -134,7 +134,7 @@ west flash -r stm32cubeprogrammer
 or
 
 ```
-west flash -r openocd
+west flash -r openocd --config firmware/boards/google/dagwood/support/openocd-stlink.cfg
 ```
 
 or start a debugging session with
@@ -144,6 +144,23 @@ west debug -r stm32cubeprogrammer
 ```
 
 or
+
+```
+west debug -r openocd
+```
+
+#### CMSIS-DAP
+
+CMSIS-DAP can be used for both flashing and debugging with openocd and is part
+of Zephyr SDK.
+
+Flash with:
+
+```
+west flash -r openocd
+```
+
+or start a debugging session with
 
 ```
 west debug -r openocd
