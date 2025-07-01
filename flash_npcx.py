@@ -20,9 +20,6 @@ def main(argv):
     global target
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-p", "--port", type=str, default=utils.find_default_ec_port()
-    )
     parser.add_argument("-b", "--board", type=str, required=True)
     args = parser.parse_args(argv)
 
@@ -38,7 +35,7 @@ def main(argv):
     utils.dw_ec_uart_select_alt(dev, True)
     utils.dw_req_npcx_boot(dev)
 
-    port_base = os.path.basename(args.port)
+    port_base = os.path.basename(utils.find_programming_port(dev))
 
     os.system(
         f"{utils.UUT} --port={port_base} --baudrate=115200 --opr=wr --addr=0x200C3020 --file {monitor_file}"

@@ -12,21 +12,23 @@ DAGWOOD_EC_PORT_INFO = "Dagwood - EC shell"
 DAGWOOD_EC_ALT_PORT_INFO = "Dagwood - EC UART programming"
 
 
-def find_default_ec_port():
-    for port in serial.tools.list_ports.comports():
-        if port.usb_description() == DAGWOOD_EC_ALT_PORT_INFO:
-            return port.device
-
-    # Fallback to ttyACM1, should be correct if there's no other ACM devices.
-    return "/dev/ttyACM1"
-
-
 def find_usb_device():
     dev = usb.core.find(manufacturer="Google", product="Dagwood")
     if dev is None:
         raise ValueError("Device not found")
 
     return dev
+
+
+def find_programming_port(dev):
+    for port in serial.tools.list_ports.comports():
+        if (
+            port.serial_number == dev.serial_number
+            and port.usb_description() == DAGWOOD_EC_ALT_PORT_INFO
+        ):
+            return port.device
+
+    raise ValueError(f"No port found for device serial={dev.serial_number}")
 
 
 # bRequest values:

@@ -22,9 +22,6 @@ def main(argv):
     global target
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-p", "--port", type=str, default=utils.find_default_ec_port()
-    )
     parser.add_argument("-b", "--board", type=str, required=True)
     args = parser.parse_args(argv)
 
@@ -34,13 +31,14 @@ def main(argv):
     print(f"Programming EC binary: {bin_file}")
 
     dev = utils.find_usb_device()
+    port = utils.find_programming_port(dev)
 
     utils.dw_req_power(dev, True)
     utils.dw_ec_uart_select_alt(dev, True)
 
     # Use the -n "no_verify" flag by default reads are very slow using
     # the ITEFLASH tool.
-    os.system(f"{utils.ITEFLASH} -d {args.port} -f {bin_file} -n")
+    os.system(f"{utils.ITEFLASH} -d {port} -f {bin_file} -n")
 
     utils.dw_ec_uart_select_alt(dev, False)
     utils.dw_ec_reset(dev)
