@@ -26,9 +26,6 @@ def main(argv):
     global target
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-p", "--port", type=str, default=utils.find_default_ec_port()
-    )
     parser.add_argument("-b", "--board", type=str, required=True)
     args = parser.parse_args(argv)
 
@@ -60,11 +57,11 @@ def main(argv):
     print(f"ROM start {rom_start}")
 
     dev = utils.find_usb_device()
+    port_base = os.path.basename(utils.find_programming_port(dev))
 
     utils.dw_req_power(dev, True)
+    utils.dw_ec_uart_select_alt(dev, True)
     utils.dw_req_npcx_boot(dev)
-
-    port_base = os.path.basename(args.port)
 
     # Load the monitor code
     os.system(
@@ -80,6 +77,8 @@ def main(argv):
     os.system(
         f"{utils.UUT} --port={port_base} --baudrate=115200 --opr=go --addr={entry}"
     )
+
+    utils.dw_ec_uart_select_alt(dev, False)
 
 
 if __name__ == "__main__":
