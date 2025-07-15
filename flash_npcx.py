@@ -6,6 +6,7 @@
 import argparse
 import os
 from pathlib import Path
+import subprocess
 import sys
 
 import utils
@@ -37,11 +38,30 @@ def main(argv):
 
     port_base = os.path.basename(utils.find_programming_port(dev))
 
-    os.system(
-        f"{utils.UUT} --port={port_base} --baudrate=115200 --opr=wr --addr=0x200C3020 --file {monitor_file}"
+    subprocess.run(
+        [
+            utils.UUT,
+            f"--port={port_base}",
+            "--baudrate=115200",
+            "--opr=wr",
+            "--addr=0x200C3020",
+            f"--file={monitor_file}",
+        ],
+        check=True,
+        env=os.environ,
     )
-    os.system(
-        f"{utils.UUT} --port={port_base} --baudrate=115200 --opr=wr --auto --offset=0 --file {bin_file}"
+    subprocess.run(
+        [
+            utils.UUT,
+            f"--port={port_base}",
+            "--baudrate=115200",
+            "--opr=wr",
+            "--auto",
+            "--offset=0",
+            f"--file={bin_file}",
+        ],
+        check=True,
+        env=os.environ,
     )
 
     utils.dw_ec_uart_select_alt(dev, False)

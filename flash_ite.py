@@ -8,6 +8,7 @@
 import argparse
 import os
 from pathlib import Path
+import subprocess
 import sys
 
 import utils
@@ -38,7 +39,11 @@ def main(argv):
 
     # Use the -n "no_verify" flag by default reads are very slow using
     # the ITEFLASH tool.
-    os.system(f"{utils.ITEFLASH} -d {port} -f {bin_file} -n")
+    subprocess.run(
+        [utils.ITEFLASH, "-d", port, "-f", bin_file, "-n"],
+        check=True,
+        env=os.environ,
+    )
 
     utils.dw_ec_uart_select_alt(dev, False)
     utils.dw_ec_reset(dev)

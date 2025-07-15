@@ -8,6 +8,7 @@
 import argparse
 import os
 from pathlib import Path
+import subprocess
 import sys
 
 # pylint: disable=import-error
@@ -64,18 +65,44 @@ def main(argv):
     utils.dw_req_npcx_boot(dev)
 
     # Load the monitor code
-    os.system(
-        f"{utils.UUT} --port={port_base} --baudrate=115200 --opr=wr --addr=0x200C3020 --file {monitor_file}"
+    subprocess.run(
+        [
+            utils.UUT,
+            f"--port={port_base}",
+            "--baudrate=115200",
+            "--opr=wr",
+            "--addr=0x200C3020",
+            f"--file={monitor_file}",
+        ],
+        check=True,
+        env=os.environ,
     )
 
     # Load the binary file directly to RAM
-    os.system(
-        f"{utils.UUT} --port={port_base} --baudrate=115200 --opr=wr --addr={rom_start} --file {bin_file}"
+    subprocess.run(
+        [
+            utils.UUT,
+            f"--port={port_base}",
+            "--baudrate=115200",
+            "--opr=wr",
+            f"--addr={rom_start}",
+            f"--file={bin_file}",
+        ],
+        check=True,
+        env=os.environ,
     )
 
     # Jump to the entry point in RAM
-    os.system(
-        f"{utils.UUT} --port={port_base} --baudrate=115200 --opr=go --addr={entry}"
+    subprocess.run(
+        [
+            utils.UUT,
+            f"--port={port_base}",
+            "--baudrate=115200",
+            "--opr=go",
+            f"--addr={entry}",
+        ],
+        check=True,
+        env=os.environ,
     )
 
     utils.dw_ec_uart_select_alt(dev, False)
