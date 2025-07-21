@@ -46,6 +46,7 @@ USB_REQ_EC_RESET = 0
 USB_REQ_POWER = 1
 USB_REQ_NPCX_BOOT = 2
 USB_REQ_EC_UART_SELECT = 3
+USB_REQ_REBOOT = 4
 
 # NPXC uartupdatetool name
 UUT = "uartupdatetool"
@@ -84,3 +85,8 @@ def dw_ec_uart_select_alt(dev, enable):
         value = 0
 
     dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, value, USB_REQ_EC_UART_SELECT, 0)
+
+
+def dw_reboot(dev):
+    """Reboot the Dagwood board"""
+    dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, 0, USB_REQ_REBOOT, 0)

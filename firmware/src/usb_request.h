@@ -9,6 +9,7 @@
 #define USB_REQ_POWER 1
 #define USB_REQ_NPCX_BOOT 2
 #define USB_REQ_EC_UART_SELECT_ALT 3
+#define USB_REQ_REBOOT 4
 
 struct usb_request_callback {
 	void (*callback)(uint16_t index, uint16_t value);
