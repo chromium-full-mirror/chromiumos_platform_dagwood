@@ -30,6 +30,8 @@
 
 	gpio_keys: gpio-keys {
 		compatible = "gpio-keys";
+		debounce-interval-ms = <3>;
+
 		user_button: mcu_pb01 {
 			gpios = <&gpiob 1 GPIO_ACTIVE_LOW>;
 			zephyr,code = <INPUT_KEY_0>;
