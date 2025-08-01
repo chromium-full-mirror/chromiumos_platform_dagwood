@@ -5,7 +5,6 @@
 
 """Load an NPCX image into RAM and execute it"""
 
-import argparse
 import os
 from pathlib import Path
 import subprocess
@@ -26,10 +25,7 @@ SDK_MONITOR_PATH = Path("/usr/share/ec-devutils/npcx_monitor.bin")
 
 def main(argv):
     global args
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-b", "--board", type=str, required=True)
-    args = parser.parse_args(argv)
+    args = utils.parse_arguments(argv)
 
     board_path = Path("build", "zephyr", args.board)
     elf_file = board_path / "build-ro" / "zephyr" / "zephyr.elf"

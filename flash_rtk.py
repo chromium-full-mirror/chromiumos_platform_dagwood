@@ -8,7 +8,6 @@
 # bootrom mode: pull the EC UART_TX pin when coming out of reset.
 #
 
-import argparse
 import os
 from pathlib import Path
 import shutil
@@ -23,10 +22,7 @@ args = None
 
 def main(argv):
     global args
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-b", "--board", type=str, required=False)
-    args = parser.parse_args(argv)
+    args = utils.parse_arguments(argv)
 
     board_path = Path("build", "zephyr", args.board)
     bin_file = board_path / "output" / "ec.bin"

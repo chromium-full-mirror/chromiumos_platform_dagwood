@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import argparse
 import os
 
 import serial.tools.list_ports
@@ -39,6 +40,16 @@ def verify_file(*filepaths):
         if os.path.isfile(filepath):
             return filepath
     raise ValueError(f"No such file {filepaths}")
+
+
+def parse_arguments(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-b", "--board", type=str, required=True, help="zmake board name"
+    )
+    args = parser.parse_args(argv)
+
+    return args
 
 
 # bRequest values:

@@ -3,7 +3,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import argparse
 import os
 from pathlib import Path
 import subprocess
@@ -20,10 +19,7 @@ SDK_MONITOR_PATH = Path("/usr/share/ec-devutils/npcx_monitor.bin")
 
 def main(argv):
     global args
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-b", "--board", type=str, required=True)
-    args = parser.parse_args(argv)
+    args = utils.parse_arguments(argv)
 
     board_path = Path("build", "zephyr", args.board)
     bin_file = board_path / "output" / "ec.bin"

@@ -5,7 +5,6 @@
 
 # Flash an ITE EC image using the dagwood tester.
 
-import argparse
 import os
 from pathlib import Path
 import subprocess
@@ -19,10 +18,7 @@ args = None
 
 def main(argv):
     global args
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-b", "--board", type=str, required=True)
-    args = parser.parse_args(argv)
+    args = utils.parse_arguments(argv)
 
     board_path = Path("build", "zephyr", args.board)
     bin_file = board_path / "output" / "ec.bin"
