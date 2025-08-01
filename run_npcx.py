@@ -20,9 +20,6 @@ import utils
 args = None
 
 
-SDK_MONITOR_PATH = Path("/usr/share/ec-devutils/npcx_monitor.bin")
-
-
 def main(argv):
     global args
     args = utils.parse_arguments(argv)
@@ -30,14 +27,11 @@ def main(argv):
     board_path = Path("build", "zephyr", args.board)
     elf_file = board_path / "build-ro" / "zephyr" / "zephyr.elf"
     bin_file = board_path / "build-ro" / "zephyr" / "zephyr.bin"
-    monitor_file = board_path / "build-singleimage" / "npcx_monitor.bin"
 
     utils.verify_file(bin_file)
-    monitor_file = utils.verify_file(monitor_file, SDK_MONITOR_PATH)
 
     print(f"Board ELF: {elf_file}")
     print(f"Board Bin: {bin_file}")
-    print(f"Monitor Bin: {monitor_file}")
 
     with open(elf_file, "rb") as file:
         elf = ELFFile(file)
@@ -64,20 +58,6 @@ def main(argv):
     utils.dw_req_power(dev, True)
     utils.dw_ec_uart_select_alt(dev, True)
     utils.dw_req_npcx_boot(dev)
-
-    # Load the monitor code
-    subprocess.run(
-        [
-            utils.UUT,
-            f"--port={port_base}",
-            "--baudrate=115200",
-            "--opr=wr",
-            "--addr=0x200C3020",
-            f"--file={monitor_file}",
-        ],
-        check=True,
-        env=os.environ,
-    )
 
     # Load the binary file directly to RAM
     subprocess.run(
