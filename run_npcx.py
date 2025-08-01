@@ -19,7 +19,6 @@ import utils
 
 
 args = None
-target = None
 
 
 SDK_MONITOR_PATH = Path("/usr/share/ec-devutils/npcx_monitor.bin")
@@ -27,7 +26,6 @@ SDK_MONITOR_PATH = Path("/usr/share/ec-devutils/npcx_monitor.bin")
 
 def main(argv):
     global args
-    global target
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-b", "--board", type=str, required=True)
