@@ -15,10 +15,20 @@ DAGWOOD_EC_PORT_INFO = "Dagwood - EC shell"
 DAGWOOD_EC_ALT_PORT_INFO = "Dagwood - EC UART programming"
 
 
-def find_usb_device():
-    dev = usb.core.find(manufacturer="Google", product="Dagwood")
+def find_usb_device(board_id):
+    device_spec = {
+        "manufacturer": "Google",
+        "product": "Dagwood",
+    }
+
+    if board_id:
+        device_spec["serial_number"] = board_id
+
+    dev = usb.core.find(**device_spec)
     if dev is None:
         raise ValueError("Device not found")
+
+    print(f"Board id: {dev.serial_number}")
 
     return dev
 
@@ -47,6 +57,13 @@ def parse_arguments(argv):
     parser.add_argument(
         "-b", "--board", type=str, required=True, help="zmake board name"
     )
+    parser.add_argument(
+        "--board-id",
+        type=str,
+        required=False,
+        help="Dagwood board serial number",
+    )
+
     args = parser.parse_args(argv)
 
     return args

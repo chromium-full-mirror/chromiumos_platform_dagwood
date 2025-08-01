@@ -27,7 +27,7 @@ def main(argv):
 
     print(f"Programming EC binary: {bin_file}")
 
-    dev = utils.find_usb_device()
+    dev = utils.find_usb_device(args.board_id)
     port = utils.find_programming_port(dev)
 
     utils.dw_req_power(dev, True)

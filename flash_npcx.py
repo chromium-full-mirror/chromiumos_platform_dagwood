@@ -30,7 +30,7 @@ def main(argv):
 
     print(f"Programming EC monitor={monitor_file} binary={bin_file}")
 
-    dev = utils.find_usb_device()
+    dev = utils.find_usb_device(args.board_id)
 
     utils.dw_req_power(dev, True)
     utils.dw_ec_uart_select_alt(dev, True)

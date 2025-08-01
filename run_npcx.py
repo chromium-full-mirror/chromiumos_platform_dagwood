@@ -58,7 +58,7 @@ def main(argv):
     print(f"Entry point: {entry}")
     print(f"ROM start {rom_start}")
 
-    dev = utils.find_usb_device()
+    dev = utils.find_usb_device(args.board_id)
     port_base = os.path.basename(utils.find_programming_port(dev))
 
     utils.dw_req_power(dev, True)
