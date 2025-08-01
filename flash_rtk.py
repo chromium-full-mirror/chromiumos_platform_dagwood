@@ -34,6 +34,11 @@ def main(argv):
     bin_file = board_path / "output" / "ec.bin"
     rtk_monitor_file = board_path / "output" / "rts5915_flash_upload.bin"
 
+    utils.verify_file(bin_file)
+    utils.verify_file(rtk_monitor_file)
+
+    print(f"Programming EC monitor={rtk_monitor_file} binary={bin_file}")
+
     dev = utils.find_usb_device()
     port = utils.find_programming_port(dev)
 

@@ -29,6 +29,8 @@ def main(argv):
     board_path = Path("build", "zephyr", args.board)
     bin_file = board_path / "output" / "ec.bin"
 
+    utils.verify_file(bin_file)
+
     print(f"Programming EC binary: {bin_file}")
 
     dev = utils.find_usb_device()

@@ -22,6 +22,9 @@ args = None
 target = None
 
 
+SDK_MONITOR_PATH = Path("/usr/share/ec-devutils/npcx_monitor.bin")
+
+
 def main(argv):
     global args
     global target
@@ -33,10 +36,14 @@ def main(argv):
     board_path = Path("build", "zephyr", args.board)
     elf_file = board_path / "build-ro" / "zephyr" / "zephyr.elf"
     bin_file = board_path / "build-ro" / "zephyr" / "zephyr.bin"
-    monitor_file = board_path / "output" / "npcx_monitor.bin"
+    monitor_file = board_path / "build-singleimage" / "npcx_monitor.bin"
+
+    utils.verify_file(bin_file)
+    monitor_file = utils.verify_file(monitor_file, SDK_MONITOR_PATH)
 
     print(f"Board ELF: {elf_file}")
     print(f"Board Bin: {bin_file}")
+    print(f"Monitor Bin: {monitor_file}")
 
     with open(elf_file, "rb") as file:
         elf = ELFFile(file)

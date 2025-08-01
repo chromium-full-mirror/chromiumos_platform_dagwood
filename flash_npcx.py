@@ -16,6 +16,9 @@ args = None
 target = None
 
 
+SDK_MONITOR_PATH = Path("/usr/share/ec-devutils/npcx_monitor.bin")
+
+
 def main(argv):
     global args
     global target
@@ -26,9 +29,12 @@ def main(argv):
 
     board_path = Path("build", "zephyr", args.board)
     bin_file = board_path / "output" / "ec.bin"
-    monitor_file = board_path / "output" / "npcx_monitor.bin"
+    monitor_file = board_path / "build-singleimage" / "npcx_monitor.bin"
 
-    print(f"Programming EC binary: {bin_file}")
+    utils.verify_file(bin_file)
+    monitor_file = utils.verify_file(monitor_file, SDK_MONITOR_PATH)
+
+    print(f"Programming EC monitor={monitor_file} binary={bin_file}")
 
     dev = utils.find_usb_device()
 

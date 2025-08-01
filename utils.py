@@ -3,6 +3,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import os
+
 import serial.tools.list_ports
 import usb
 
@@ -29,6 +31,14 @@ def find_programming_port(dev):
             return port.device
 
     raise ValueError(f"No port found for device serial={dev.serial_number}")
+
+
+def verify_file(*filepaths):
+    """Check if any of the specified files exists, returns the first match."""
+    for filepath in filepaths:
+        if os.path.isfile(filepath):
+            return filepath
+    raise ValueError(f"No such file {filepaths}")
 
 
 # bRequest values:
