@@ -6,6 +6,8 @@
 import argparse
 import os
 
+from elftools.elf.elffile import ELFFile
+from elftools.elf.sections import SymbolTableSection
 import serial.tools.list_ports
 import usb
 
@@ -52,6 +54,25 @@ def verify_file(*filepaths):
     raise ValueError(f"No such file {filepaths}")
 
 
+def elf_offsets(elf_file):
+    """Find the ROM start and entry point for the specified elf_file"""
+    with open(elf_file, "rb") as file:
+        elf = ELFFile(file)
+        entry = hex(elf.header["e_entry"])
+        for section in elf.iter_sections():
+            if isinstance(section, SymbolTableSection):
+                symbols = {
+                    s.name: s.entry.st_value for s in section.iter_symbols()
+                }
+                break
+
+    rom_start = symbols.get("__rom_start_address")
+    if rom_start is None:
+        raise LookupError("__rom_start_address symbol not found")
+
+    return entry, hex(rom_start)
+
+
 def parse_arguments(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -62,6 +83,12 @@ def parse_arguments(argv):
         type=str,
         required=False,
         help="Dagwood board serial number",
+    )
+    parser.add_argument(
+        "-r",
+        "--run",
+        action="store_true",
+        help="Load and run the image from SRAM instead of flash, ignored if not supported",
     )
 
     args = parser.parse_args(argv)
@@ -85,15 +112,6 @@ USB_REQ_POWER = 1
 USB_REQ_NPCX_BOOT = 2
 USB_REQ_EC_UART_SELECT = 3
 USB_REQ_REBOOT = 4
-
-# NPXC uartupdatetool name
-UUT = "uartupdatetool"
-
-# ITE UART update tool name
-ITEFLASH = "itecomdbgr"
-
-# Realtek UART update tool name
-RTKFLASH = "rtkupdate"
 
 
 def dw_req_power(dev, enable):
