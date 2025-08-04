@@ -22,13 +22,17 @@ class Platform:
     """Base class for a AIC platform"""
 
     NAME = "unknown"
+    ZEPHYR_BIN_FILE = "zephyr.bin"
 
     def __init__(self, build_path, usb_dev):
         self.build_path = build_path
         self.usb_dev = usb_dev
         self.port = utils.find_programming_port(usb_dev)
 
-        self.bin_file = utils.verify_file(build_path / "output" / "ec.bin")
+        self.bin_file = utils.verify_file(
+            build_path / "output" / "ec.bin",
+            build_path / "zephyr" / self.ZEPHYR_BIN_FILE,
+        )
 
     @staticmethod
     def match(board_name):
@@ -54,6 +58,7 @@ class PlatformNPCX(Platform):
     NAME = "NPCX"
     SDK_MONITOR_PATH = Path("/usr/share/ec-devutils/npcx_monitor.bin")
     UUT = "uartupdatetool"
+    ZEPHYR_BIN_FILE = "zephyr.npcx.bin"
 
     def __init__(self, build_path, usb_dev):
         super().__init__(build_path, usb_dev)
@@ -75,6 +80,7 @@ class PlatformNPCX(Platform):
                 build_path / "build-ro" / "zephyr" / "zephyr.elf",
                 build_path / "build-rw" / "zephyr" / "zephyr.elf",
                 build_path / "build-singleimage" / "zephyr" / "zephyr.elf",
+                build_path / "zephyr" / "zephyr.elf",
             )
             self.bin_file = elf_file.with_suffix(".bin")
             self.entry, self.rom_start = utils.elf_offsets(elf_file)
@@ -181,12 +187,14 @@ class PlatformRTS(Platform):
 
     NAME = "RTS"
     RTKFLASH = "rtkupdate"
+    ZEPHYR_BIN_FILE = "zephyr.rts5912.bin"
 
     def __init__(self, build_path, usb_dev):
         super().__init__(build_path, usb_dev)
 
         self.monitor_file = utils.verify_file(
             build_path / "output" / "rts5915_flash_upload.bin",
+            build_path / "rts5915_flash_upload.bin",
         )
 
         self.rtkflash = utils.verify_executable(
@@ -234,6 +242,7 @@ def load_build_info(build_path):
         build_path / "build-ro" / "build_info.yml",
         build_path / "build-rw" / "build_info.yml",
         build_path / "build-singleimage" / "build_info.yml",
+        build_path / "build_info.yml",
     )
 
     with open(build_info_path, "r") as f:
@@ -256,7 +265,18 @@ def main(argv):
     global args
     args = utils.parse_arguments(argv)
 
-    build_path = Path("build", "zephyr", args.board)
+    if not args.board and not args.build_dir:
+        print(f"Either board or build-dir has to be specified")
+        sys.exit(1)
+
+    if args.board and args.build_dir:
+        print(f"Board and build-dir cannot be specified at the same time")
+        sys.exit(1)
+
+    if args.board:
+        build_path = Path("build", "zephyr", args.board)
+    else:
+        build_path = args.build_dir
 
     build_info = load_build_info(build_path)
     board_name = build_info["cmake"]["board"]["name"]

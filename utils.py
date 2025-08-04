@@ -5,6 +5,7 @@
 
 import argparse
 import os
+from pathlib import Path
 import shutil
 
 from elftools.elf.elffile import ELFFile
@@ -89,7 +90,23 @@ def elf_offsets(elf_file):
 def parse_arguments(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-b", "--board", type=str, required=True, help="zmake board name"
+        "-b",
+        "--board",
+        type=str,
+        required=False,
+        help="zmake board name, this is typically a zmake project, the script "
+        "is going to look for a build/zephyr/<board-dir> path in the current "
+        "directory.",
+    )
+    parser.add_argument(
+        "-d",
+        "--build-dir",
+        type=Path,
+        required=False,
+        help="Build directory path, this points to the output directory of a "
+        "Zephyr build, can be used to flash an application that has not been "
+        "build with zmake, or to only flash a ro image by pointing at the "
+        "build-ro directory from a zmake build.",
     )
     parser.add_argument(
         "--board-id",
