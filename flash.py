@@ -265,6 +265,12 @@ def main(argv):
     global args
     args = utils.parse_arguments(argv)
 
+    usb_dev = utils.find_usb_device(args.board_id)
+
+    if args.reboot:
+        utils.dw_reboot(usb_dev)
+        sys.exit(0)
+
     if not args.board and not args.build_dir:
         print(f"Either board or build-dir has to be specified")
         sys.exit(1)
@@ -281,8 +287,6 @@ def main(argv):
     build_info = load_build_info(build_path)
     board_name = build_info["cmake"]["board"]["name"]
     board_platform = find_platform(board_name)
-
-    usb_dev = utils.find_usb_device(args.board_id)
 
     platform = board_platform(build_path, usb_dev)
     print(f"Board: {board_name} platform: {platform.NAME}")

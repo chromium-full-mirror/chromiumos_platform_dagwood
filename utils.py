@@ -120,6 +120,11 @@ def parse_arguments(argv):
         action="store_true",
         help="Load and run the image from SRAM instead of flash, ignored if not supported",
     )
+    parser.add_argument(
+        "--reboot",
+        action="store_true",
+        help="Reboot the dagwood board",
+    )
 
     args = parser.parse_args(argv)
 
@@ -175,4 +180,8 @@ def dw_ec_uart_select_alt(dev, enable):
 
 def dw_reboot(dev):
     """Reboot the Dagwood board"""
-    dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, 0, USB_REQ_REBOOT, 0)
+    try:
+        dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, 0, USB_REQ_REBOOT, 0)
+    except usb.USBError as e:
+        # This is expected, ignore
+        pass
