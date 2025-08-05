@@ -5,6 +5,7 @@
 
 import argparse
 import os
+import shutil
 
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
@@ -52,6 +53,18 @@ def verify_file(*filepaths):
         if os.path.isfile(filepath):
             return filepath
     raise ValueError(f"No such file {filepaths}")
+
+
+def verify_executable(*filepaths):
+    """Check if any of the specified commands exists, returns the first match."""
+    for filepath in filepaths:
+        if shutil.which(filepath):
+            return filepath
+
+        if os.path.isfile(filepath) and os.access(filepath, os.X_OK):
+            return Path(filepath).resolve()
+
+    raise ValueError(f"No such executable {filepaths}")
 
 
 def elf_offsets(elf_file):

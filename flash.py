@@ -63,6 +63,11 @@ class PlatformNPCX(Platform):
             self.SDK_MONITOR_PATH,
         )
 
+        self.uut = utils.verify_executable(
+            Path("build") / "host" / "util" / self.UUT,
+            self.UUT,
+        )
+
         self.port_base = os.path.basename(self.port)
 
         if args.run:
@@ -86,7 +91,7 @@ class PlatformNPCX(Platform):
 
     def npcx_flash_commands(self):
         flash_monitor = [
-            self.UUT,
+            str(self.uut),
             f"--port={self.port_base}",
             "--baudrate=115200",
             "--opr=wr",
@@ -95,7 +100,7 @@ class PlatformNPCX(Platform):
         ]
 
         flash_image = [
-            self.UUT,
+            str(self.uut),
             f"--port={self.port_base}",
             "--baudrate=115200",
             "--opr=wr",
@@ -107,7 +112,7 @@ class PlatformNPCX(Platform):
 
     def npcx_run_commands(self):
         load_image = [
-            self.UUT,
+            str(self.uut),
             f"--port={self.port_base}",
             "--baudrate=115200",
             "--opr=wr",
@@ -115,7 +120,7 @@ class PlatformNPCX(Platform):
             f"--file={self.bin_file}",
         ]
         run_image = [
-            self.UUT,
+            str(self.uut),
             f"--port={self.port_base}",
             "--baudrate=115200",
             "--opr=go",
@@ -141,6 +146,14 @@ class PlatformITE(Platform):
     NAME = "ITE"
     ITEFLASH = "itecomdbgr"
 
+    def __init__(self, build_path, usb_dev):
+        super().__init__(build_path, usb_dev)
+
+        self.iteflash = utils.verify_executable(
+            Path("build") / "host" / "util" / self.ITEFLASH,
+            self.ITEFLASH,
+        )
+
     @staticmethod
     def match(board_name):
         return board_name in ["it8xxx2"]
@@ -149,7 +162,7 @@ class PlatformITE(Platform):
         # Use the -n "no_verify" flag by default reads are very slow using
         # the ITEFLASH tool.
         flash_image = [
-            self.ITEFLASH,
+            str(self.iteflash),
             "-d",
             self.port,
             "-f",
@@ -176,6 +189,11 @@ class PlatformRTS(Platform):
             build_path / "output" / "rts5915_flash_upload.bin",
         )
 
+        self.rtkflash = utils.verify_executable(
+            Path("build") / "host" / "util" / self.RTKFLASH,
+            self.RTKFLASH,
+        )
+
     @staticmethod
     def match(board_name):
         return board_name in ["realtek"]
@@ -185,19 +203,19 @@ class PlatformRTS(Platform):
 
     def flash_commands(self):
         disable_wr = [
-            self.RTKFLASH,
+            str(self.rtkflash),
             "--method=wp",
             "--protect=0",
             f"--uart_device={self.port}",
         ]
         flash_monitor = [
-            self.RTKFLASH,
+            str(self.rtkflash),
             "--method=frame",
             f"--file={self.monitor_file}",
             f"--uart_device={self.port}",
         ]
         flash_image = [
-            self.RTKFLASH,
+            str(self.rtkflash),
             "--method=flash",
             "--spi_start=0x00000000",
             f"--file={self.bin_file}",
