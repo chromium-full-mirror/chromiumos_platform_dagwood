@@ -272,7 +272,7 @@ def main(argv):
         sys.exit(0)
 
     if not args.board and not args.build_dir:
-        print(f"Either board or build-dir has to be specified")
+        print(f"Either --board or --build-dir has to be specified")
         sys.exit(1)
 
     if args.board and args.build_dir:
