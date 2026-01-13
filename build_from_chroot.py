@@ -27,6 +27,9 @@ PROJECT_NAME = "dagwood"
 
 args = None
 
+# Valid log level strings, should match zmake -l option
+log_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
 
 def main(argv):
     global args
@@ -48,6 +51,22 @@ def main(argv):
         action="store_true",
         help="Tweak few zmake flags for the CI integration run",
     )
+
+    parser.add_argument(
+        "-l",
+        "--log-level",
+        choices=log_levels,
+        default="INFO",
+        help="Set the logging level (default=INFO)",
+    )
+
+    parser.add_argument(
+        "--clobber",
+        action="store_true",
+        dest="clobber",
+        help="Delete existing build directories, even if configuration is unchanged",
+    )
+
     args = parser.parse_args(argv)
 
     if not args.output_dir:
@@ -56,11 +75,16 @@ def main(argv):
         build_path = args.output_dir
 
     zmake_cmd = ["zmake", "--projects-dir", str(SELF_PATH)]
+    zmake_cmd.append("--log-level")
+    zmake_cmd.append(args.log_level.upper())
 
     if args.integration:
         zmake_cmd.append("-D")
 
     zmake_cmd.extend(["build", "-B", str(build_path), PROJECT_NAME])
+
+    if args.clobber:
+        zmake_cmd.append("--clobber")
 
     subprocess.run(
         zmake_cmd,
