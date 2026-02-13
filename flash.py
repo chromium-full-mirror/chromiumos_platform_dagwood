@@ -29,10 +29,15 @@ class Platform:
         self.usb_dev = usb_dev
         self.port = utils.find_programming_port(usb_dev)
 
-        self.bin_file = utils.verify_file(
+        paths = [
             build_path / "output" / "ec.bin",
             build_path / "zephyr" / self.ZEPHYR_BIN_FILE,
-        )
+        ]
+
+        if args.ro:
+            paths.insert(0, build_path / "packer" / "zephyr_ro.bin")
+
+        self.bin_file = utils.verify_file(*paths)
 
     @staticmethod
     def match(board_name):

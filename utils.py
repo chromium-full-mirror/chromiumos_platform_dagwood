@@ -109,6 +109,13 @@ def parse_arguments(argv):
         "build-ro directory from a zmake build.",
     )
     parser.add_argument(
+        "--ro",
+        action="store_true",
+        help="Flash a zephyr_ro.bin image if available. This is much faster "
+        "than flashing the whole ro/rw ec.bin file, can be useful for "
+        "debugging.",
+    )
+    parser.add_argument(
         "--board-id",
         type=str,
         required=False,
