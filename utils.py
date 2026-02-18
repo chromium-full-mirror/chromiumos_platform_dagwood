@@ -132,6 +132,11 @@ def parse_arguments(argv):
         action="store_true",
         help="Reboot the dagwood board",
     )
+    parser.add_argument(
+        "--no-preserve",
+        action="store_true",
+        help="Avoid preserving the sections of firmware image with preserve property",
+    )
 
     args = parser.parse_args(argv)
 

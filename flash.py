@@ -7,8 +7,11 @@
 
 import os
 from pathlib import Path
+import re
+import shutil
 import subprocess
 import sys
+import tempfile
 
 import yaml
 
@@ -39,10 +42,161 @@ class Platform:
 
         self.bin_file = utils.verify_file(*paths)
 
+        self.temp_bin = False
+        self.dump_fmap = utils.verify_executable("dump_fmap")
+        self.futility = utils.verify_executable("futility")
+
     @staticmethod
     def match(board_name):
         """Returns true if the class can handle board_name"""
         return False
+
+    def read_partially(self, offset, size, file_path):
+        """Read a portion of the flash"""
+        raise NotImplementedError()
+
+    def read_chip(self, file_path):
+        """Read the entire flash"""
+        raise NotImplementedError()
+
+    def preserve_sections(self):
+        """Preserve sections of the image that are marked with the 'preserve' flag"""
+
+        # Nothing to preserve if loading into RAM.
+        if args.no_preserve or args.run:
+            return
+
+        print("Checking for sections to preserve...")
+
+        # Create a copy of the bin file to modify
+        modified_bin = self.bin_file.parent / (self.bin_file.name + ".tmp")
+        shutil.copy(self.bin_file, modified_bin)
+        preservation_performed = False
+
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_path = Path(temp_dir)
+
+                # 1. Get FMAP location from new image
+                new_image_fmap = self._read_fmap_header(modified_bin)
+
+                if new_image_fmap is None:
+                    print("No FMAP found in new image, skipping preservation.")
+                    os.remove(modified_bin)
+                    return
+
+                if fmap_entry := new_image_fmap.get("FMAP"):
+                    fmap_offset = fmap_entry["offset"]
+                    fmap_size = fmap_entry["size"]
+                else:
+                    print("No FMAP found in new image, skipping preservation.")
+                    return
+
+                # 2. Read FMAP from chip
+                cur_fmap_img = temp_path / "ec.cur.fmap.bin"
+                try:
+                    self.read_partially(fmap_offset, fmap_size, cur_fmap_img)
+                except Exception as e:
+                    print(f"Failed to read FMAP from chip: {e}")
+                    os.remove(modified_bin)
+                    return
+
+                # 3. Verify FMAP header
+                cur_ec_fmap = self._read_fmap_header(cur_fmap_img)
+                if cur_ec_fmap is None:
+                    print(
+                        "FMAP header not found at expected offset reading entire chip..."
+                    )
+
+                    cur_img = temp_path / "ec.cur.bin"
+                    try:
+                        self.read_chip(cur_img)
+                    except Exception as e:
+                        print(f"Failed to read chip: {e}")
+                        os.remove(modified_bin)
+                        return
+
+                    cur_ec_fmap = self._read_fmap_header(cur_img)
+                    if cur_ec_fmap is None:
+                        print("No FMAP found in chip, skipping preservation.")
+                        os.remove(modified_bin)
+                        return
+
+                # 4. Extract preserved sections using FMAP
+                preservation_performed = self._preserve_from_fmap(
+                    cur_ec_fmap, new_image_fmap, modified_bin, temp_path
+                )
+
+        except Exception as e:
+            print(f"Error during preservation: {e}")
+            if os.path.exists(modified_bin):
+                os.remove(modified_bin)
+            return
+
+        if preservation_performed:
+            self.bin_file = modified_bin
+            self.temp_bin = True
+        else:
+            os.remove(modified_bin)
+
+    def _read_fmap_header(self, fmap_file):
+        # Read the FMAP from a full EC binary or binary fragment
+        try:
+            cmd = [self.dump_fmap, "-e", str(fmap_file)]
+            print(f"FMAP cmd: {' '.join(cmd)}")
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+
+            fmap = {}
+
+            for line in result.stdout.strip().split("\n"):
+                # Split by whitespace: [name, offset, size, flag]
+                parts = line.split()
+                if len(parts) == 4:
+                    name, offset, size, flag = parts
+                    fmap[name] = {
+                        "offset": int(offset),
+                        "size": int(size),
+                        "preserve": flag
+                        == "preserve",  # Converts to boolean True/False
+                    }
+        except subprocess.CalledProcessError:
+            print("No FMAP found in new image, skipping preservation.")
+            return None
+
+        return fmap
+
+    def _preserve_from_fmap(
+        self, cur_ec_fmap, new_img_fmap, new_img, temp_path
+    ):
+        for name, fmap_entry in cur_ec_fmap.items():
+            if fmap_entry["preserve"]:
+                offset = fmap_entry["offset"]
+                size = fmap_entry["size"]
+
+                # Check if section exists in new image
+                if name not in new_img_fmap:
+                    print(f"Section {name} not found in new image, skipping.")
+                    continue
+
+                sec_img = temp_path / f"ec.cur.{name}.bin"
+                print(f"Preserving {name} section...")
+                self.read_partially(offset, size, sec_img)
+                subprocess.run(
+                    [
+                        self.futility,
+                        "load_fmap",
+                        str(new_img),
+                        f"{name}:{sec_img}",
+                    ],
+                    check=True,
+                )
+                preservation_performed = True
+        return preservation_performed
 
     def enter_bootloader(self):
         """Enter bootloader for the platform"""
@@ -213,20 +367,44 @@ class PlatformRTS(Platform):
 
     def enter_bootloader(self):
         utils.dw_req_npcx_boot(self.usb_dev)
-
-    def flash_commands(self):
         disable_wr = [
             str(self.rtkflash),
             "--method=wp",
             "--protect=0",
             f"--uart_device={self.port}",
         ]
+        subprocess.run(disable_wr, check=True)
         flash_monitor = [
             str(self.rtkflash),
             "--method=frame",
             f"--file={self.monitor_file}",
             f"--uart_device={self.port}",
         ]
+        subprocess.run(flash_monitor, check=True)
+
+    def read_partially(self, offset, size, file_path):
+        command = [
+            str(self.rtkflash),
+            "--method=read_bin",
+            f"--spi_start={offset}",
+            f"--file={file_path}",
+            f"--bin_length={size}",
+            f"--uart_device={self.port}",
+        ]
+        subprocess.run(command, check=True)
+
+    def read_chip(self, file_path):
+        command = [
+            str(self.rtkflash),
+            "--method=read_bin",
+            "--spi_start=0x0",
+            f"--file={file_path}",
+            "--bin_length=0x100000",
+            f"--uart_device={self.port}",
+        ]
+        subprocess.run(command, check=True)
+
+    def flash_commands(self):
         flash_image = [
             str(self.rtkflash),
             "--method=flash",
@@ -235,7 +413,7 @@ class PlatformRTS(Platform):
             f"--uart_device={self.port}",
         ]
 
-        return [disable_wr, flash_monitor, flash_image]
+        return [flash_image]
 
     def exit_bootloader(self):
         utils.dw_ec_reset(self.usb_dev)
@@ -301,15 +479,19 @@ def main(argv):
 
     platform.enter_bootloader()
 
-    flash_commands = platform.flash_commands()
-    for command in flash_commands:
-        print(f"Running: \"{' '.join(command)}\"")
+    platform.preserve_sections()
 
-        subprocess.run(
-            command,
-            check=True,
-            env=os.environ,
-        )
+    flash_commands = platform.flash_commands()
+    try:
+        for command in flash_commands:
+            subprocess.run(
+                command,
+                check=True,
+                env=os.environ,
+            )
+    finally:
+        if platform.temp_bin and os.path.exists(platform.bin_file):
+            os.remove(platform.bin_file)
 
     utils.dw_ec_uart_select_alt(usb_dev, False)
 
