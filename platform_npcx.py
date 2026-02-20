@@ -4,6 +4,7 @@
 
 import os
 from pathlib import Path
+import subprocess
 
 from platform_base import Platform
 
@@ -15,6 +16,7 @@ class PlatformNPCX(Platform):
 
     NAME = "NPCX"
     SDK_MONITOR_PATH = Path("/usr/share/ec-devutils/npcx_monitor.bin")
+    NPCX_BASE_ADDR = 0x64000000
     UUT = "uartupdatetool"
     ZEPHYR_BIN_FILE = "zephyr.npcx.bin"
 
@@ -53,16 +55,44 @@ class PlatformNPCX(Platform):
     def enter_bootloader(self):
         utils.dw_req_npcx_boot(self.usb_dev)
 
-    def npcx_flash_commands(self):
-        flash_monitor = [
+        # If we're flashing, we want to load the monitor code before
+        # all other steps.
+        if not self.args.run:
+            flash_monitor = [
+                str(self.uut),
+                f"--port={self.port_base}",
+                "--baudrate=115200",
+                "--opr=wr",
+                "--addr=0x200C3020",
+                f"--file={self.monitor_file}",
+            ]
+            print(f"Flashing monitor: {' '.join(flash_monitor)}")
+            subprocess.run(flash_monitor, check=True)
+
+    def read_partially(self, offset, size, file_path):
+        command = [
             str(self.uut),
             f"--port={self.port_base}",
             "--baudrate=115200",
-            "--opr=wr",
-            "--addr=0x200C3020",
-            f"--file={self.monitor_file}",
+            "--opr=rd",
+            f"--addr={offset + self.NPCX_BASE_ADDR}",
+            f"--size={size}",
+            f"--file={file_path}",
         ]
+        print(f"Reading: {' '.join(command)}")
+        subprocess.run(command, check=True)
 
+    def read_chip(self, file_path):
+        command = [
+            str(self.uut),
+            f"--port={self.port_base}",
+            "--baudrate=115200",
+            "--read-flash",
+            f"--file={file_path}",
+        ]
+        subprocess.run(command, check=True)
+
+    def npcx_flash_commands(self):
         flash_image = [
             str(self.uut),
             f"--port={self.port_base}",
@@ -72,7 +102,7 @@ class PlatformNPCX(Platform):
             "--offset=0",
             f"--file={self.bin_file}",
         ]
-        return [flash_monitor, flash_image]
+        return [flash_image]
 
     def npcx_run_commands(self):
         load_image = [
