@@ -156,7 +156,7 @@ class Platform:
                         == "preserve",  # Converts to boolean True/False
                     }
         except subprocess.CalledProcessError:
-            print("No FMAP found in new image, skipping preservation.")
+            print(f"No FMAP found in {fmap_file}")
             return None
 
         return fmap
