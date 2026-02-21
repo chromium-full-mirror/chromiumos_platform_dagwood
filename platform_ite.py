@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 from pathlib import Path
+import subprocess
 
 from platform_base import Platform
 
@@ -26,6 +27,29 @@ class PlatformITE(Platform):
     @staticmethod
     def match(board_name):
         return board_name in ["it8xxx2"]
+
+    def read_partially(self, offset, size, file_path):
+        read_command = [
+            str(self.iteflash),
+            "-d",
+            self.port,
+            "-r",
+            str(file_path),
+            "-R",
+            str(offset),
+            str(size),
+        ]
+        subprocess.run(read_command, check=True)
+
+    def read_chip(self, file_path):
+        read_command = [
+            str(self.iteflash),
+            "-d",
+            self.port,
+            "-r",
+            str(file_path),
+        ]
+        subprocess.run(read_command, check=True)
 
     def flash_commands(self):
         # Use the -n "no_verify" flag by default reads are very slow using
