@@ -16,13 +16,17 @@ class PlatformRTK(Platform):
     NAME = "RTK"
     RTKFLASH = "rtkupdate"
     ZEPHYR_BIN_FILE = "zephyr.rts5912.bin"
+    SDK_MOTNITOR_PATH = Path("/usr/share/ec-devutils/rts5915_flash_upload.bin")
 
     def __init__(self, build_path, usb_dev, args):
         super().__init__(build_path, usb_dev, args)
 
         self.monitor_file = utils.verify_file(
-            build_path / "output" / "rts5915_flash_upload.bin",
-            build_path / "rts5915_flash_upload.bin",
+            build_path.parent
+            / "rtk_flame"
+            / "build-singleimage"
+            / "rts5915_flash_upload.bin",
+            self.SDK_MOTNITOR_PATH,
         )
 
         self.rtkflash = utils.verify_executable(
