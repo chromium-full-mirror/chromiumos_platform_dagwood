@@ -1,7 +1,9 @@
 build/
 .cache/
+.vscode/
 .venv/
 .west/
 modules/
+twister-out*
 zephyr/
 __pycache__/
