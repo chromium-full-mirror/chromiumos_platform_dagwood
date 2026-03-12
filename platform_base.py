@@ -34,8 +34,10 @@ class Platform:
         self.bin_file = utils.verify_file(*paths)
 
         self.temp_bin = False
-        self.dump_fmap = utils.verify_executable("dump_fmap")
-        self.futility = utils.verify_executable("futility")
+
+        if not self.args.no_preserve:
+            self.dump_fmap = utils.verify_executable("dump_fmap")
+            self.futility = utils.verify_executable("futility")
 
     @staticmethod
     def match(board_name):
