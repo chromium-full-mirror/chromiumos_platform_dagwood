@@ -29,6 +29,11 @@ class PlatformRTK(Platform):
             self.SDK_MOTNITOR_PATH,
         )
 
+        # b/476201042, always power off the EC at the start of programming.
+        # This ensures we don't trigger the deep sleep hang.
+        print("RTK detected: powering off EC")
+        utils.dw_req_power(usb_dev, False)
+
         self.rtkflash = utils.verify_executable(
             Path("build") / "host" / "util" / self.RTKFLASH,
             self.RTKFLASH,
