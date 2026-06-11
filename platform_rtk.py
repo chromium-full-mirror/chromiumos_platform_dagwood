@@ -39,6 +39,33 @@ class PlatformRTK(Platform):
             self.RTKFLASH,
         )
 
+        if self.args.run:
+            elf_file = utils.verify_file(
+                build_path / "build-ro" / "zephyr" / "zephyr.elf",
+                build_path / "build-rw" / "zephyr" / "zephyr.elf",
+                build_path / "build-singleimage" / "zephyr" / "zephyr.elf",
+                build_path / "zephyr" / "zephyr.elf",
+            )
+            self.bin_file = elf_file.with_suffix(".bin")
+            self.entry, self.rom_start = utils.elf_offsets(elf_file)
+
+            # b/518863832: The Realtek bootrom only supports jumping to address
+            # 0x20010020. Only support images that load to this address and
+            # also have the entry point set to the ARM/THUMB jump address
+            # of 0x20010020.
+            if self.rom_start != "0x20010020":
+                raise ValueError(
+                    f"Invalid ROM start address {self.rom_start}, expected 0x20010020"
+                )
+            if self.entry not in ["0x20010020", "0x20010021"]:
+                raise ValueError(
+                    f"Invalid entry point {self.entry}, expected 0x20010020 or 0x20010021"
+                )
+
+            print(
+                f"File: {self.bin_file} entry point: {self.entry} ROM start: {self.rom_start}"
+            )
+
     @staticmethod
     def match(board_name):
         return board_name in ["realtek"]
@@ -52,6 +79,10 @@ class PlatformRTK(Platform):
             f"--uart_device={self.port}",
         ]
         subprocess.run(disable_wr, check=True)
+
+        if self.args.run:
+            return
+
         flash_monitor = [
             str(self.rtkflash),
             "--method=frame",
@@ -82,7 +113,7 @@ class PlatformRTK(Platform):
         ]
         subprocess.run(command, check=True)
 
-    def flash_commands(self):
+    def rtk_flash_command(self):
         flash_image = [
             str(self.rtkflash),
             "--method=flash",
@@ -90,8 +121,23 @@ class PlatformRTK(Platform):
             f"--file={self.bin_file}",
             f"--uart_device={self.port}",
         ]
-
         return [flash_image]
 
+    def rtk_run_command(self):
+        command = [
+            str(self.rtkflash),
+            "--method=load_sram",
+            f"--file={self.bin_file}",
+            f"--uart_device={self.port}",
+        ]
+        return [command]
+
+    def flash_commands(self):
+        if self.args.run:
+            return self.rtk_run_command()
+        else:
+            return self.rtk_flash_command()
+
     def exit_bootloader(self):
-        utils.dw_ec_reset(self.usb_dev)
+        if not self.args.run:
+            utils.dw_ec_reset(self.usb_dev)
