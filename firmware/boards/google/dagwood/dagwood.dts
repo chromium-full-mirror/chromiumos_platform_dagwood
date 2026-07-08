@@ -169,6 +169,12 @@
 		a-gpios = <&gpiof 12 GPIO_ACTIVE_HIGH>;
 		port-count = <2>;
 	};
+
+	fake-fan {
+		compatible = "cros,fake-fan";
+		pwms = <&pwm2 3 0 PWM_POLARITY_NORMAL>, /* input, pwm control from aic */
+		       <&pwm5 4 0 PWM_POLARITY_NORMAL>; /* output, fake tach signal to the aic */
+	};
 };
 
 &pinctrl {
@@ -317,6 +323,29 @@ zephyr_i2c: &i2c3 {
 
 &die_temp {
 	status = "okay";
+};
+
+&timers2 {
+	st,prescaler = <1>;
+	status = "okay";
+
+	pwm2: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim2_ch3_pa2>;
+		pinctrl-names = "default";
+		four-channel-capture-support;
+	};
+};
+
+&timers5 {
+	st,prescaler = <150>;
+	status = "okay";
+
+	pwm5: pwm {
+		status = "okay";
+		pinctrl-0 = <&tim5_ch4_pa3>;
+		pinctrl-names = "default";
+	};
 };
 
 &adc3 {

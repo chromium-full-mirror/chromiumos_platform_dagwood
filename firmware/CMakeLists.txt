@@ -23,5 +23,6 @@ target_sources(app PRIVATE
 target_sources_ifdef(CONFIG_DT_HAS_CROS_NPCX_BOOT_ENABLED app PRIVATE src/npcx_boot.c)
 target_sources_ifdef(CONFIG_I2C_EEPROM_TARGET app PRIVATE src/i2c_target.c)
 target_sources_ifdef(CONFIG_DT_HAS_CROS_I2C_MUX_ENABLED app PRIVATE src/i2c_mux.c)
+target_sources_ifdef(CONFIG_DT_HAS_CROS_FAKE_FAN_ENABLED app PRIVATE src/fake_fan.c)
 
 zephyr_linker_sources(ROM_SECTIONS src/usb_request.ld)
