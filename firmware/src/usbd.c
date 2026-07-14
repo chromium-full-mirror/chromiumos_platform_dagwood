@@ -37,14 +37,13 @@ USBD_CONFIGURATION_DEFINE(app_usb_fs_config, attributes, USB_MAX_POWER,
 USBD_CONFIGURATION_DEFINE(app_usb_hs_config, attributes, USB_MAX_POWER,
 			  &hs_cfg_desc);
 
-static int to_host_cb(const struct usbd_context *const ctx,
-		      const struct usb_setup_packet *const setup,
-		      struct net_buf *const buf)
+static struct net_buf *to_host_cb(const struct usbd_context *const ctx,
+				  const struct usb_setup_packet *const setup)
 {
 	LOG_INF("%d: %d %d %d %d", setup->RequestType.type, setup->bRequest,
 		setup->wLength, setup->wIndex, setup->wValue);
 
-	return 0;
+	return NULL;
 }
 
 static int to_dev_cb(const struct usbd_context *const ctx,
