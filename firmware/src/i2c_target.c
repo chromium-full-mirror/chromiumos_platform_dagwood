@@ -7,7 +7,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(i2c_traget, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(dagwood_i2c_target_app, LOG_LEVEL_INF);
 
 static int i2c_target_device_init(const struct device *dev)
 {
@@ -30,19 +30,7 @@ static int i2c_target_device_init(const struct device *dev)
 
 static int i2c_target_init(void)
 {
-	int ret;
-
-	ret = i2c_target_device_init(DEVICE_DT_GET(DT_NODELABEL(eeprom0)));
-	if (ret < 0) {
-		return ret;
-	}
-
-	ret = i2c_target_device_init(DEVICE_DT_GET(DT_NODELABEL(eeprom1)));
-	if (ret < 0) {
-		return ret;
-	}
-
-	return 0;
+	return i2c_target_device_init(DEVICE_DT_GET(DT_NODELABEL(eeprom0)));
 }
 
 SYS_INIT(i2c_target_init, APPLICATION, 99);
