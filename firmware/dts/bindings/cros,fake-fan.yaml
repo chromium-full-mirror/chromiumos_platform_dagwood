@@ -1,0 +1,16 @@
+# Copyright 2026 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+description: |
+  Fake fan node
+
+compatible: "cros,fake-fan"
+
+properties:
+  pwms:
+    required: true
+    type: phandle-array
+    description: PWM device for control and tach
+    min-len: 2
+    max-len: 2
