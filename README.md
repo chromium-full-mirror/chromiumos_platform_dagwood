@@ -18,9 +18,8 @@ use the non chroot west build.
 
 ### Out of chroot build
 
-This setup reuses the repository that is part of the normal chroot setup, just
-adds a west workspace on top of it, which can coexist with the normal one
-managed with repo.
+This setup reuses the upstream Zephyr repository and modules directly, requires
+an install of the zephyr-sdk but all the debugging tools are available.
 
 Venv setup (only needed once)
 
@@ -67,16 +66,6 @@ of the process it the same.
 
 This setup takes less disk space, but results in a checkout with no tools to
 upload changelists.
-
-### Using the usptream repositories instead of chromium mirrored ones
-
-The project is setup to use the chromium mirror of Zephyr and modules, but can
-also be built against the upstream repositories directly. To do that use the
-`west-upstream.yml` manifest when initializing the west workspace, for example
-
-```
-west init -l firmware --mf west-upstream.yml
-```
 
 ### Build with a standalone full Zephyr checkout
 
@@ -164,29 +153,6 @@ or start a debugging session with
 
 ```
 west debug -r openocd
-```
-
-## Flashing the AIC board
-
-### ITE
-
-```
-zmake build ite-aic
-itecomdbgr -f build/zephyr/ite-aic/output/ec.bin -d /dev/ttyACM1
-# reset the ec (ec reset)
-```
-
-### NPCX
-
-Assuming the tester shell is on /dev/ttyACM0 and the EC on /dev/ttyACM1, from
-the chroot in the EC directory:
-
-```
-zmake build npcx-aic
-# power on the ec (ec power on) enter bootloader mode (npcx_boot) on the tester shell
-uartupdatetool --port=ttyACM1 --baudrate=115200 --opr=wr --addr=0x200C3020 --file build/zephyr/npcx-aic/output/npcx_monitor.bin
-uartupdatetool --port=ttyACM1 --baudrate=115200 --opr=wr --auto --offset=0 --file build/zephyr/npcx-aic/output/ec.bin
-# reset the ec (ec reset)
 ```
 
 ## Persistent serial port path
