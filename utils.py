@@ -48,6 +48,17 @@ def find_programming_port(dev):
     raise ValueError(f"No port found for device serial={dev.serial_number}")
 
 
+def find_ec_port(dev):
+    for port in serial.tools.list_ports.comports():
+        if (
+            port.serial_number == dev.serial_number
+            and port.usb_description() == DAGWOOD_EC_PORT_INFO
+        ):
+            return port.device
+
+    raise ValueError(f"No port found for device serial={dev.serial_number}")
+
+
 def verify_file(*filepaths):
     """Check if any of the specified files exists, returns the first match."""
     for filepath in filepaths:
