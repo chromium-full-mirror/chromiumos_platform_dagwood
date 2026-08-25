@@ -12,7 +12,8 @@
 
 LOG_MODULE_REGISTER(uart_switch, LOG_LEVEL_INF);
 
-static void ec_uart_select_alt(uint16_t index, uint16_t value)
+static void ec_uart_select_alt(uint16_t index, uint16_t value,
+			       const uint8_t *buf, size_t size)
 {
 	static bool ec_uart_alt;
 
@@ -50,7 +51,7 @@ static void ec_uart_select_alt(uint16_t index, uint16_t value)
 	ec_uart_alt = value;
 }
 
-USB_REQUEST_CALLBACK_DEFINE(ec_uart_select_alt);
+USB_REQUEST_CALLBACK_DEFINE(ec_uart_select_alt, NULL);
 
 static int ec_uart_select_init(void)
 {

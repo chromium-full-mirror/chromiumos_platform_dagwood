@@ -8,7 +8,8 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/reboot.h>
 
-static void dw_reboot(uint16_t index, uint16_t value)
+static void dw_reboot(uint16_t index, uint16_t value, const uint8_t *buf,
+		      size_t size)
 {
 	if (index != USB_REQ_REBOOT) {
 		return;
@@ -17,4 +18,4 @@ static void dw_reboot(uint16_t index, uint16_t value)
 	sys_reboot(SYS_REBOOT_COLD);
 }
 
-USB_REQUEST_CALLBACK_DEFINE(dw_reboot);
+USB_REQUEST_CALLBACK_DEFINE(dw_reboot, NULL);

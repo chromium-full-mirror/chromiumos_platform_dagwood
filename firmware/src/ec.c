@@ -208,7 +208,8 @@ SHELL_STATIC_SUBCMD_SET_CREATE(ec_cmds,
 
 SHELL_CMD_REGISTER(ec, &ec_cmds, "EC control commands", NULL);
 
-static void ec_cb(uint16_t index, uint16_t value)
+static void ec_cb(uint16_t index, uint16_t value, const uint8_t *buf,
+		  size_t size)
 {
 	switch (index) {
 	case USB_REQ_EC_RESET:
@@ -222,7 +223,7 @@ static void ec_cb(uint16_t index, uint16_t value)
 	}
 }
 
-USB_REQUEST_CALLBACK_DEFINE(ec_cb);
+USB_REQUEST_CALLBACK_DEFINE(ec_cb, NULL);
 
 static int ec_init(void)
 {

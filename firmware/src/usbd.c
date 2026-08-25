@@ -9,7 +9,9 @@
 #include <zephyr/drivers/uart/uart_bridge.h>
 #include <zephyr/input/input.h>
 #include <zephyr/kernel.h>
+#include <zephyr/net_buf.h>
 #include <zephyr/pm/device_runtime.h>
+#include <zephyr/sys/minmax.h>
 #include <zephyr/usb/usbd.h>
 
 LOG_MODULE_REGISTER(usbd_app, LOG_LEVEL_INF);
@@ -40,8 +42,37 @@ USBD_CONFIGURATION_DEFINE(app_usb_hs_config, attributes, USB_MAX_POWER,
 static struct net_buf *to_host_cb(const struct usbd_context *const ctx,
 				  const struct usb_setup_packet *const setup)
 {
-	LOG_INF("%d: %d %d %d %d", setup->RequestType.type, setup->bRequest,
-		setup->wLength, setup->wIndex, setup->wValue);
+	static uint8_t host_buf[USB_REQUEST_MAX_BUF_SIZE];
+	struct net_buf *buf;
+	size_t len;
+	int ret;
+
+	STRUCT_SECTION_FOREACH(usb_request_callback, callback)
+	{
+		if (callback->to_host == NULL) {
+			continue;
+		}
+
+		ret = callback->to_host(setup->wIndex, setup->wValue, host_buf,
+					sizeof(host_buf));
+		if (ret <= 0) {
+			/* Skip if the callback returned no data or an error */
+			continue;
+		}
+
+		len = min((size_t)ret, sizeof(host_buf));
+		len = min(len, (size_t)setup->wLength);
+
+		buf = usbd_ep_ctrl_data_in_alloc(ctx, len);
+		if (buf == NULL) {
+			LOG_ERR("Failed to allocate data IN buffer");
+			return NULL;
+		}
+
+		net_buf_add_mem(buf, host_buf, len);
+
+		return buf;
+	}
 
 	return NULL;
 }
@@ -50,9 +81,28 @@ static int to_dev_cb(const struct usbd_context *const ctx,
 		     const struct usb_setup_packet *const setup,
 		     const struct net_buf *const buf)
 {
+	static uint8_t dev_buf[USB_REQUEST_MAX_BUF_SIZE];
+	size_t len = 0;
+
+	if (setup->wLength > sizeof(dev_buf)) {
+		return -EINVAL;
+	}
+
+	if (setup->wLength > 0 && buf == NULL) {
+		return 0;
+	}
+
+	if (buf != NULL) {
+		len = net_buf_linearize(dev_buf, sizeof(dev_buf), buf, 0,
+					buf->len);
+	}
+
 	STRUCT_SECTION_FOREACH(usb_request_callback, callback)
 	{
-		callback->callback(setup->wIndex, setup->wValue);
+		if (callback->to_dev != NULL) {
+			callback->to_dev(setup->wIndex, setup->wValue,
+					 len > 0 ? dev_buf : NULL, len);
+		}
 	}
 
 	return 0;

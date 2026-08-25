@@ -65,7 +65,8 @@ static int cmd_npcx_boot(const struct shell *sh, size_t argc, char **argv)
 
 SHELL_CMD_REGISTER(npcx_boot, NULL, "Enter NPCX bootloader", cmd_npcx_boot);
 
-static void npcx_boot_cb(uint16_t index, uint16_t value)
+static void npcx_boot_cb(uint16_t index, uint16_t value, const uint8_t *buf,
+			 size_t size)
 {
 	const struct shell *sh = shell_backend_uart_get_ptr();
 
@@ -78,4 +79,4 @@ static void npcx_boot_cb(uint16_t index, uint16_t value)
 	cmd_npcx_boot(sh, 0, NULL);
 }
 
-USB_REQUEST_CALLBACK_DEFINE(npcx_boot_cb);
+USB_REQUEST_CALLBACK_DEFINE(npcx_boot_cb, NULL);
