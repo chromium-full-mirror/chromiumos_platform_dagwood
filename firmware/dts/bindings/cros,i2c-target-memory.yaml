@@ -1,0 +1,16 @@
+# Copyright 2026 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+description: |
+  I2C target memory device with clock stretching test support
+
+compatible: "cros,i2c-target-memory"
+
+include: [i2c-device.yaml]
+
+properties:
+  size:
+    type: int
+    default: 256
+    description: Total memory size in bytes
