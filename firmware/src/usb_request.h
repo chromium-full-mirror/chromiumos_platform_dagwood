@@ -11,8 +11,15 @@
 #define USB_REQ_NPCX_BOOT 2
 #define USB_REQ_EC_UART_SELECT_ALT 3
 #define USB_REQ_REBOOT 4
+#define USB_REQ_FAN_GET_PWM 5
+#define USB_REQ_FAN_SET_TACH 6
 
 #define USB_REQUEST_MAX_BUF_SIZE 128
+
+struct usb_fan_pwm {
+	uint32_t frequency;
+	uint32_t duty_cycle;
+};
 
 struct usb_request_callback {
 	void (*to_dev)(uint16_t index, uint16_t value, const uint8_t *buf,

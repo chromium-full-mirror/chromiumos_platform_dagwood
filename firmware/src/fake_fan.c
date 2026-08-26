@@ -3,6 +3,8 @@
  * found in the LICENSE file.
  */
 
+#include "usb_request.h"
+
 #include <zephyr/device.h>
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/kernel.h>
@@ -17,7 +19,7 @@ LOG_MODULE_REGISTER(fake_fan, LOG_LEVEL_INF);
 static const struct pwm_dt_spec pwm_in = PWM_DT_SPEC_INST_GET_BY_IDX(0, 0);
 static const struct pwm_dt_spec tach_out = PWM_DT_SPEC_INST_GET_BY_IDX(0, 1);
 
-static int cmd_get_pwm(const struct shell *sh, size_t argc, char **argv)
+static int fake_fan_get_pwm(uint32_t *freq, uint32_t *dc)
 {
 	uint64_t period_ns;
 	uint64_t width_ns;
@@ -27,7 +29,6 @@ static int cmd_get_pwm(const struct shell *sh, size_t argc, char **argv)
 			       PWM_CAPTURE_TYPE_BOTH | PWM_CAPTURE_MODE_SINGLE,
 			       &period_ns, &width_ns, K_MSEC(500));
 	if (ret < 0) {
-		shell_error(sh, "pwm_capture_nsec error, ret: %d", ret);
 		return ret;
 	}
 
@@ -35,8 +36,35 @@ static int cmd_get_pwm(const struct shell *sh, size_t argc, char **argv)
 		return -EINVAL;
 	}
 
-	uint32_t freq = NSEC_PER_SEC / period_ns;
-	uint32_t dc = DIV_ROUND_CLOSEST(width_ns * 100, period_ns);
+	*freq = NSEC_PER_SEC / period_ns;
+	*dc = DIV_ROUND_CLOSEST(width_ns * 100, period_ns);
+
+	return 0;
+}
+
+static int fake_fan_set_tach(uint32_t rpm)
+{
+	LOG_INF("set tach: %d rpm", rpm);
+
+	if (rpm == 0) {
+		return pwm_set_dt(&tach_out, 0, 0);
+	}
+
+	uint32_t period = (uint64_t)NSEC_PER_SEC / rpm * 60 / 2;
+	return pwm_set_dt(&tach_out, period, period / 2);
+}
+
+static int cmd_get_pwm(const struct shell *sh, size_t argc, char **argv)
+{
+	uint32_t freq;
+	uint32_t dc;
+	int ret;
+
+	ret = fake_fan_get_pwm(&freq, &dc);
+	if (ret < 0) {
+		shell_error(sh, "pwm_capture_nsec error, ret: %d", ret);
+		return ret;
+	}
 
 	shell_print(sh, "fan pwm: %d Hz %d %%", freq, dc);
 
@@ -54,15 +82,7 @@ static int cmd_set_tach(const struct shell *sh, size_t argc, char **argv)
 		return err;
 	}
 
-	if (rpm == 0) {
-		pwm_set_dt(&tach_out, 0, 0);
-		return 0;
-	}
-
-	uint32_t period = (uint64_t)NSEC_PER_SEC / rpm * 60 / 2;
-	pwm_set_dt(&tach_out, period, period / 2);
-
-	return 0;
+	return fake_fan_set_tach(rpm);
 }
 
 /* clang-format off */
@@ -74,3 +94,37 @@ SHELL_STATIC_SUBCMD_SET_CREATE(fan_cmds,
 /* clang-format on */
 
 SHELL_CMD_REGISTER(fan, &fan_cmds, "Fan commands", NULL);
+
+static void fake_fan_to_dev(uint16_t index, uint16_t value, const uint8_t *buf,
+			    size_t size)
+{
+	if (index != USB_REQ_FAN_SET_TACH) {
+		return;
+	}
+
+	fake_fan_set_tach(value);
+}
+
+static int fake_fan_to_host(uint16_t index, uint16_t value, uint8_t *buf,
+			    size_t size)
+{
+	struct usb_fan_pwm *data = (struct usb_fan_pwm *)buf;
+	int ret;
+
+	if (index != USB_REQ_FAN_GET_PWM) {
+		return 0;
+	}
+
+	if (size < sizeof(*data)) {
+		return -ENOMEM;
+	}
+
+	ret = fake_fan_get_pwm(&data->frequency, &data->duty_cycle);
+	if (ret < 0) {
+		return ret;
+	}
+
+	return sizeof(*data);
+}
+
+USB_REQUEST_CALLBACK_DEFINE(fake_fan_to_dev, fake_fan_to_host);

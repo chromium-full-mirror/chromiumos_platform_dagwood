@@ -7,6 +7,7 @@ import argparse
 import os
 from pathlib import Path
 import shutil
+import struct
 
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
@@ -170,6 +171,8 @@ USB_REQ_POWER = 1
 USB_REQ_NPCX_BOOT = 2
 USB_REQ_EC_UART_SELECT = 3
 USB_REQ_REBOOT = 4
+USB_REQ_FAN_GET_PWM = 5
+USB_REQ_FAN_SET_TACH = 6
 
 
 def dw_req_power(dev, enable):
@@ -208,3 +211,15 @@ def dw_reboot(dev):
     except usb.USBError as e:
         # This is expected, ignore
         pass
+
+
+def dw_fan_get_pwm(dev):
+    """Get the fan PWM frequency and duty cycle"""
+    buf = dev.ctrl_transfer(TO_HOST_REQ_TYPE, 0, 0, USB_REQ_FAN_GET_PWM, 8)
+    freq, dc = struct.unpack("<II", buf)
+    return freq, dc
+
+
+def dw_fan_set_tach(dev, rpm):
+    """Set the fan tachometer RPM"""
+    dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, rpm, USB_REQ_FAN_SET_TACH, 0)
