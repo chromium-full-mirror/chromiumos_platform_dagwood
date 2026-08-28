@@ -10,12 +10,11 @@ from pathlib import Path
 import subprocess
 import sys
 
+import dagwood_utils
 from platform_ite import PlatformITE
 from platform_npcx import PlatformNPCX
 from platform_rtk import PlatformRTK
 import yaml
-
-import utils
 
 
 args = None
@@ -23,7 +22,7 @@ args = None
 
 def load_build_info(build_path):
     """Find and returns a parsed build_info yaml file"""
-    build_info_path = utils.verify_file(
+    build_info_path = dagwood_utils.verify_file(
         build_path / "build-ro" / "build_info.yml",
         build_path / "build-rw" / "build_info.yml",
         build_path / "build-singleimage" / "build_info.yml",
@@ -48,12 +47,12 @@ def find_platform(board_name):
 
 def main(argv):
     global args
-    args = utils.parse_arguments(argv)
+    args = dagwood_utils.parse_arguments(argv)
 
-    usb_dev = utils.find_usb_device(args.board_id)
+    usb_dev = dagwood_utils.find_usb_device(args.board_id)
 
     if args.reboot:
-        utils.dw_reboot(usb_dev)
+        dagwood_utils.dw_reboot(usb_dev)
         sys.exit(0)
 
     if not args.board and not args.build_dir:
@@ -76,8 +75,8 @@ def main(argv):
     platform = board_platform(build_path, usb_dev, args)
     print(f"Board: {board_name} platform: {platform.NAME}")
 
-    utils.dw_req_power(usb_dev, True)
-    utils.dw_ec_uart_select_alt(usb_dev, True)
+    dagwood_utils.dw_req_power(usb_dev, True)
+    dagwood_utils.dw_ec_uart_select_alt(usb_dev, True)
 
     platform.enter_bootloader()
 
@@ -95,7 +94,7 @@ def main(argv):
         if platform.temp_bin and os.path.exists(platform.bin_file):
             os.remove(platform.bin_file)
 
-    utils.dw_ec_uart_select_alt(usb_dev, False)
+    dagwood_utils.dw_ec_uart_select_alt(usb_dev, False)
 
     platform.exit_bootloader()
 

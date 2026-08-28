@@ -6,9 +6,8 @@ import os
 from pathlib import Path
 import subprocess
 
+import dagwood_utils
 from platform_base import Platform
-
-import utils
 
 
 class PlatformNPCX(Platform):
@@ -23,12 +22,12 @@ class PlatformNPCX(Platform):
     def __init__(self, build_path, usb_dev, args):
         super().__init__(build_path, usb_dev, args)
 
-        self.monitor_file = utils.verify_file(
+        self.monitor_file = dagwood_utils.verify_file(
             build_path / "build-singleimage" / "npcx_monitor.bin",
             self.SDK_MONITOR_PATH,
         )
 
-        self.uut = utils.verify_executable(
+        self.uut = dagwood_utils.verify_executable(
             Path("build") / "host" / "util" / self.UUT,
             self.UUT,
         )
@@ -36,14 +35,14 @@ class PlatformNPCX(Platform):
         self.port_base = os.path.basename(self.port)
 
         if self.args.run:
-            elf_file = utils.verify_file(
+            elf_file = dagwood_utils.verify_file(
                 build_path / "build-ro" / "zephyr" / "zephyr.elf",
                 build_path / "build-rw" / "zephyr" / "zephyr.elf",
                 build_path / "build-singleimage" / "zephyr" / "zephyr.elf",
                 build_path / "zephyr" / "zephyr.elf",
             )
             self.bin_file = elf_file.with_suffix(".bin")
-            self.entry, self.rom_start = utils.elf_offsets(elf_file)
+            self.entry, self.rom_start = dagwood_utils.elf_offsets(elf_file)
             print(
                 f"File: {elf_file} entry point: {self.entry} ROM start: {self.rom_start}"
             )
@@ -53,7 +52,7 @@ class PlatformNPCX(Platform):
         return board_name in ["npcx9", "npcx7"]
 
     def enter_bootloader(self):
-        utils.dw_req_npcx_boot(self.usb_dev)
+        dagwood_utils.dw_req_npcx_boot(self.usb_dev)
 
         # If we're flashing, we want to load the monitor code before
         # all other steps.
@@ -131,4 +130,4 @@ class PlatformNPCX(Platform):
 
     def exit_bootloader(self):
         if not self.args.run:
-            utils.dw_ec_reset(self.usb_dev)
+            dagwood_utils.dw_ec_reset(self.usb_dev)

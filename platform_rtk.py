@@ -5,9 +5,8 @@
 from pathlib import Path
 import subprocess
 
+import dagwood_utils
 from platform_base import Platform
-
-import utils
 
 
 class PlatformRTK(Platform):
@@ -21,7 +20,7 @@ class PlatformRTK(Platform):
     def __init__(self, build_path, usb_dev, args):
         super().__init__(build_path, usb_dev, args)
 
-        self.monitor_file = utils.verify_file(
+        self.monitor_file = dagwood_utils.verify_file(
             build_path.parent
             / "rtk_flame"
             / "build-singleimage"
@@ -32,22 +31,22 @@ class PlatformRTK(Platform):
         # b/476201042, always power off the EC at the start of programming.
         # This ensures we don't trigger the deep sleep hang.
         print("RTK detected: powering off EC")
-        utils.dw_req_power(usb_dev, False)
+        dagwood_utils.dw_req_power(usb_dev, False)
 
-        self.rtkflash = utils.verify_executable(
+        self.rtkflash = dagwood_utils.verify_executable(
             Path("build") / "host" / "util" / self.RTKFLASH,
             self.RTKFLASH,
         )
 
         if self.args.run:
-            elf_file = utils.verify_file(
+            elf_file = dagwood_utils.verify_file(
                 build_path / "build-ro" / "zephyr" / "zephyr.elf",
                 build_path / "build-rw" / "zephyr" / "zephyr.elf",
                 build_path / "build-singleimage" / "zephyr" / "zephyr.elf",
                 build_path / "zephyr" / "zephyr.elf",
             )
             self.bin_file = elf_file.with_suffix(".bin")
-            self.entry, self.rom_start = utils.elf_offsets(elf_file)
+            self.entry, self.rom_start = dagwood_utils.elf_offsets(elf_file)
 
             # b/518863832: The Realtek bootrom only supports jumping to address
             # 0x20010020. Only support images that load to this address and
@@ -71,7 +70,7 @@ class PlatformRTK(Platform):
         return board_name in ["realtek"]
 
     def enter_bootloader(self):
-        utils.dw_req_npcx_boot(self.usb_dev)
+        dagwood_utils.dw_req_npcx_boot(self.usb_dev)
         disable_wr = [
             str(self.rtkflash),
             "--method=wp",
@@ -140,4 +139,4 @@ class PlatformRTK(Platform):
 
     def exit_bootloader(self):
         if not self.args.run:
-            utils.dw_ec_reset(self.usb_dev)
+            dagwood_utils.dw_ec_reset(self.usb_dev)

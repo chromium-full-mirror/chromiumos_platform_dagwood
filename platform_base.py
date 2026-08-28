@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import tempfile
 
-import utils
+import dagwood_utils
 
 
 class Platform:
@@ -21,7 +21,7 @@ class Platform:
         self.build_path = build_path
         self.usb_dev = usb_dev
         self.args = args
-        self.port = utils.find_programming_port(usb_dev)
+        self.port = dagwood_utils.find_programming_port(usb_dev)
 
         paths = [
             build_path / "output" / "ec.bin",
@@ -31,13 +31,13 @@ class Platform:
         if self.args.ro:
             paths.insert(0, build_path / "packer" / "zephyr_ro.bin")
 
-        self.bin_file = utils.verify_file(*paths)
+        self.bin_file = dagwood_utils.verify_file(*paths)
 
         self.temp_bin = False
 
         if not self.args.no_preserve:
-            self.dump_fmap = utils.verify_executable("dump_fmap")
-            self.futility = utils.verify_executable("futility")
+            self.dump_fmap = dagwood_utils.verify_executable("dump_fmap")
+            self.futility = dagwood_utils.verify_executable("futility")
 
     @staticmethod
     def match(board_name):

@@ -5,9 +5,8 @@
 from pathlib import Path
 import subprocess
 
+import dagwood_utils
 from platform_base import Platform
-
-import utils
 
 
 class PlatformITE(Platform):
@@ -19,7 +18,7 @@ class PlatformITE(Platform):
     def __init__(self, build_path, usb_dev, args):
         super().__init__(build_path, usb_dev, args)
 
-        self.iteflash = utils.verify_executable(
+        self.iteflash = dagwood_utils.verify_executable(
             Path("build") / "host" / "util" / self.ITEFLASH,
             self.ITEFLASH,
         )
@@ -66,4 +65,4 @@ class PlatformITE(Platform):
         return [flash_image]
 
     def exit_bootloader(self):
-        utils.dw_ec_reset(self.usb_dev)
+        dagwood_utils.dw_ec_reset(self.usb_dev)
