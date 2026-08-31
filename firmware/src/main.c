@@ -3,6 +3,8 @@
  * found in the LICENSE file.
  */
 
+#include "usb_request.h"
+
 #include <zephyr/drivers/led.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -13,9 +15,34 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
 const struct led_dt_spec status_led = LED_DT_SPEC_GET(DT_NODELABEL(status_led));
 
+static bool identify;
+static struct k_work_delayable identify_work;
+
+static void identify_timeout(struct k_work *work)
+{
+	identify = false;
+}
+
+static void identify_cb(uint16_t index, uint16_t value, const uint8_t *buf,
+			size_t size)
+{
+	if (index != USB_REQ_IDENTIFY) {
+		return;
+	}
+
+	LOG_INF("usb identify");
+
+	identify = true;
+	k_work_reschedule(&identify_work, K_SECONDS(5));
+}
+
+USB_REQUEST_CALLBACK_DEFINE(identify_cb, NULL);
+
 int main(void)
 {
 	int ret;
+
+	k_work_init_delayable(&identify_work, identify_timeout);
 
 	ret = pm_device_runtime_get(DEVICE_DT_GET(DT_NODELABEL(gpio_keys)));
 	if (ret < 0) {
@@ -27,9 +54,9 @@ int main(void)
 
 	while (true) {
 		led_on_dt(&status_led);
-		k_sleep(K_MSEC(1000));
+		k_sleep(K_MSEC(identify ? 100 : 1000));
 		led_off_dt(&status_led);
-		k_sleep(K_MSEC(1000));
+		k_sleep(K_MSEC(identify ? 100 : 1000));
 	}
 }
 

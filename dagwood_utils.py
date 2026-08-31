@@ -156,6 +156,12 @@ def parse_arguments(argv):
         help="Reboot the dagwood board",
     )
     parser.add_argument(
+        "-i",
+        "--identify",
+        action="store_true",
+        help="Put the Dagwood board in identify mode",
+    )
+    parser.add_argument(
         "--no-preserve",
         action="store_true",
         help="Avoid preserving the sections of firmware image with preserve property",
@@ -190,6 +196,7 @@ USB_REQ_EC_UART_SELECT = 3
 USB_REQ_REBOOT = 4
 USB_REQ_FAN_GET_PWM = 5
 USB_REQ_FAN_SET_TACH = 6
+USB_REQ_IDENTIFY = 7
 
 
 def dw_req_power(dev, enable):
@@ -240,3 +247,8 @@ def dw_fan_get_pwm(dev):
 def dw_fan_set_tach(dev, rpm):
     """Set the fan tachometer RPM"""
     dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, rpm, USB_REQ_FAN_SET_TACH, 0)
+
+
+def dw_identify(dev):
+    """Put the Dagwood board in identify mode"""
+    dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, 0, USB_REQ_IDENTIFY, 0)
