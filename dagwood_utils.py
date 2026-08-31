@@ -20,6 +20,11 @@ DAGWOOD_EC_PORT_INFO = "Dagwood - EC shell"
 DAGWOOD_EC_ALT_PORT_INFO = "Dagwood - EC UART programming"
 
 
+def print_board_id(dev):
+    version = dw_version(dev)
+    print(f"Board id: {dev.serial_number} version: {version}")
+
+
 def find_usb_device(board_id):
     device_spec = {
         "manufacturer": "Google",
@@ -33,7 +38,7 @@ def find_usb_device(board_id):
     if dev is None:
         raise ValueError("Device not found")
 
-    print(f"Board id: {dev.serial_number}")
+    print_board_id(dev)
 
     return dev
 
@@ -46,7 +51,7 @@ def list_usb_devices():
     }
 
     for dev in usb.core.find(**device_spec):
-        print(f"Board id: {dev.serial_number}")
+        print_board_id(dev)
 
 
 def find_programming_port(dev):
@@ -197,6 +202,7 @@ USB_REQ_REBOOT = 4
 USB_REQ_FAN_GET_PWM = 5
 USB_REQ_FAN_SET_TACH = 6
 USB_REQ_IDENTIFY = 7
+USB_REQ_VERSION = 8
 
 
 def dw_req_power(dev, enable):
@@ -252,3 +258,9 @@ def dw_fan_set_tach(dev, rpm):
 def dw_identify(dev):
     """Put the Dagwood board in identify mode"""
     dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, 0, USB_REQ_IDENTIFY, 0)
+
+
+def dw_version(dev):
+    """Get the Dagwood firmware version"""
+    buf = dev.ctrl_transfer(TO_HOST_REQ_TYPE, 0, 0, USB_REQ_VERSION, 64)
+    return bytes(buf).decode("utf-8")
