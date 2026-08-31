@@ -38,6 +38,17 @@ def find_usb_device(board_id):
     return dev
 
 
+def list_usb_devices():
+    device_spec = {
+        "find_all": True,
+        "manufacturer": "Google",
+        "product": "Dagwood",
+    }
+
+    for dev in usb.core.find(**device_spec):
+        print(f"Board id: {dev.serial_number}")
+
+
 def find_programming_port(dev):
     for port in serial.tools.list_ports.comports():
         if (
@@ -148,6 +159,12 @@ def parse_arguments(argv):
         "--no-preserve",
         action="store_true",
         help="Avoid preserving the sections of firmware image with preserve property",
+    )
+    parser.add_argument(
+        "-l",
+        "--list",
+        action="store_true",
+        help="List connected Dagwood boards",
     )
 
     args = parser.parse_args(argv)

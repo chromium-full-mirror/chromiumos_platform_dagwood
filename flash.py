@@ -49,6 +49,10 @@ def main(argv):
     global args
     args = dagwood_utils.parse_arguments(argv)
 
+    if args.list:
+        dagwood_utils.list_usb_devices()
+        sys.exit(0)
+
     usb_dev = dagwood_utils.find_usb_device(args.board_id)
 
     if args.reboot:
