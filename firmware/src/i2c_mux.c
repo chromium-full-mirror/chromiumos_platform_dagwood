@@ -3,6 +3,8 @@
  * found in the LICENSE file.
  */
 
+#include "usb_request.h"
+
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
@@ -23,8 +25,16 @@ struct i2c_mux_config {
 
 static int i2c_mux_select(const struct device *dev, uint8_t port)
 {
-	const struct i2c_mux_config *cfg = dev->config;
+	const struct i2c_mux_config *cfg;
 	int ret;
+
+	if (dev == NULL) {
+		return -ENODEV;
+	}
+
+	LOG_INF("set %s: %d", dev->name, port);
+
+	cfg = dev->config;
 
 	if (port >= cfg->port_count) {
 		return -EINVAL;
@@ -138,3 +148,23 @@ static int i2c_mux_init(const struct device *dev)
 			      &i2c_mux_api);
 
 DT_INST_FOREACH_STATUS_OKAY(I2C_MUX_INIT)
+
+static const struct device *const mux_a =
+	DEVICE_DT_GET(DT_NODELABEL(i2c_mux_a));
+static const struct device *const mux_b =
+	DEVICE_DT_GET(DT_NODELABEL(i2c_mux_b));
+
+static void i2c_mux_to_dev(uint16_t index, uint16_t value, const uint8_t *buf,
+			   size_t size)
+{
+	switch (index) {
+	case USB_REQ_I2C_MUX_A:
+		i2c_mux_select(mux_a, value);
+		break;
+	case USB_REQ_I2C_MUX_B:
+		i2c_mux_select(mux_b, value);
+		break;
+	}
+}
+
+USB_REQUEST_CALLBACK_DEFINE(i2c_mux_to_dev, NULL);

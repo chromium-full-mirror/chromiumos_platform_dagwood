@@ -203,6 +203,8 @@ USB_REQ_FAN_GET_PWM = 5
 USB_REQ_FAN_SET_TACH = 6
 USB_REQ_IDENTIFY = 7
 USB_REQ_VERSION = 8
+USB_REQ_I2C_MUX_A = 9
+USB_REQ_I2C_MUX_B = 10
 
 
 def dw_req_power(dev, enable):
@@ -264,3 +266,17 @@ def dw_version(dev):
     """Get the Dagwood firmware version"""
     buf = dev.ctrl_transfer(TO_HOST_REQ_TYPE, 0, 0, USB_REQ_VERSION, 64)
     return bytes(buf).decode("utf-8")
+
+
+def dw_i2c_mux_a(dev, port):
+    """Set I2C multiplexer A port"""
+    dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, port, USB_REQ_I2C_MUX_A, 0)
+
+
+def dw_i2c_mux_b(dev, port):
+    """Set I2C multiplexer B port"""
+    dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, port, USB_REQ_I2C_MUX_B, 0)
+
+
+dw_i2c_mux_a_set = dw_i2c_mux_a
+dw_i2c_mux_b_set = dw_i2c_mux_b
