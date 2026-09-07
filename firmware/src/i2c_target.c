@@ -19,8 +19,6 @@ LOG_MODULE_REGISTER(dagwood_i2c_target, LOG_LEVEL_INF);
 #define I2C_STRETCH_100MS_US (100 * USEC_PER_MSEC)
 #define I2C_STRETCH_500MS_US (500 * USEC_PER_MSEC)
 
-#define DEVICE_DT_GET_COMMA(node_id) DEVICE_DT_GET(node_id),
-
 /* clang-format off */
 const struct device *cros_i2c_target_memory_devs[] = {
 	DT_FOREACH_STATUS_OKAY(cros_i2c_target_memory, DEVICE_DT_GET_COMMA)
