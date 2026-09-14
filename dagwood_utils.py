@@ -264,8 +264,11 @@ def dw_identify(dev):
 
 def dw_version(dev):
     """Get the Dagwood firmware version"""
-    buf = dev.ctrl_transfer(TO_HOST_REQ_TYPE, 0, 0, USB_REQ_VERSION, 64)
-    return bytes(buf).decode("utf-8")
+    try:
+        buf = dev.ctrl_transfer(TO_HOST_REQ_TYPE, 0, 0, USB_REQ_VERSION, 64)
+        return bytes(buf).decode("utf-8")
+    except usb.core.USBError:
+        return "unknown"
 
 
 def dw_i2c_mux_a(dev, port):
