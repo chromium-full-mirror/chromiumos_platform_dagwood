@@ -6,15 +6,37 @@ The firmware can be built and flashed both with or without the chroot, though
 it's recommended reusing the checkout that is part of a ChromiumOS SDK as that
 includes the necessary configuration to upload changes to Gerrit.
 
-### Chroot build
+### Chroot / Docker build and flash
 
+Build the firmware:
 ```
 ./build_from_chroot.py
 ```
 
-The script is also used to flash the image by specifying the `-f` flag, only
-`dfu-util` is supported. For other flashing tools and source level debugging
-use the non chroot west build.
+Flash the firmware using an attached ST-Link debugger via OpenOCD:
+```
+# Build and flash:
+./build_from_chroot.py -f
+
+# Or flash an existing build without rebuilding:
+./build_from_chroot.py --flash-only
+```
+
+To flash using USB DFU instead:
+```
+./build_from_chroot.py -f --flasher dfu
+```
+
+You can also run this inside the EC Docker container or directly from the host:
+```
+./src/platform/ec/docker/run_docker.sh bash -c "cd /workspace/src/platform/dagwood && ./build_from_chroot.py -f"
+```
+
+Or flash directly with OpenOCD outside the chroot / container:
+```
+openocd -f firmware/boards/google/dagwood/support/openocd-stlink.cfg \
+  -c "program build/dagwood/build-singleimage/zephyr/zephyr.elf verify reset exit"
+```
 
 ### Out of chroot build
 
@@ -111,31 +133,38 @@ west debug -r jlink
 
 #### ST-LINK
 
-ST-LINK requires the [STM32CubeProgrammer host
-tools](https://docs.zephyrproject.org/latest/develop/flash_debug/host-tools.html#stm32cubeprogrammer-flash-host-tools).
+ST-LINK can be used for flashing and debugging with OpenOCD or STM32CubeProgrammer.
 
-Flash with:
-
+Flash directly using OpenOCD:
 ```
-west flash -r stm32cubeprogrammer
+openocd -f firmware/boards/google/dagwood/support/openocd-stlink.cfg \
+  -c "program build/dagwood/build-singleimage/zephyr/zephyr.elf verify reset exit"
 ```
 
-or
+Or using `build_from_chroot.py`:
+```
+./build_from_chroot.py -f
+```
 
+Or using `west`:
 ```
 west flash -r openocd --config firmware/boards/google/dagwood/support/openocd-stlink.cfg
 ```
 
-or start a debugging session with
-
+Or with STM32CubeProgrammer (requires [host tools](https://docs.zephyrproject.org/latest/develop/flash_debug/host-tools.html#stm32cubeprogrammer-flash-host-tools)):
 ```
-west debug -r stm32cubeprogrammer
+west flash -r stm32cubeprogrammer
+```
+
+Start a debugging session with:
+```
+west debug -r openocd
 ```
 
 or
 
 ```
-west debug -r openocd
+west debug -r stm32cubeprogrammer
 ```
 
 #### CMSIS-DAP
