@@ -194,3 +194,12 @@ following udev rules (add them on a file in `/etc/udev/rules.d/`):
 SUBSYSTEM=="tty", ACTION=="add", ATTRS{interface}=="Dagwood shell", SYMLINK+="tty-dw-shell"
 SUBSYSTEM=="tty", ACTION=="add", ATTRS{interface}=="EC shell", SYMLINK+="tty-ec-shell"
 ```
+
+## Signal and Pin Mapping Documentation
+
+Reference pinouts and signal mappings between the 200-pin Intel MECC connector and the Dagwood fixture MCU as well as supported EC Add-In Cards (AICs):
+
+- [MECC to Dagwood MCU Mapping](mecc_to_mcu_mapping.md) - STM32 MCU signal mapping and power rail connections.
+- [MECC to ITE IT82002 Mapping](mecc_to_ite_mapping.md) - ITE Tech IT82002 (`ite-aic`) GPIO and peripheral mapping.
+- [MECC to Nuvoton NPCX9 Mapping](mecc_to_npcx_mapping.md) - Nuvoton NPCX9 (`npcx-aic`) GPIO and peripheral mapping.
+- [MECC to Realtek RTS5912 Mapping](mecc_to_rtk_mapping.md) - Realtek RTS5912 (`rtk-aic`) GPIO and peripheral mapping.
