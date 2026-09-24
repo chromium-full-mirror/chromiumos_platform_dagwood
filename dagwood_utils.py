@@ -205,8 +205,26 @@ USB_REQ_IDENTIFY = 7
 USB_REQ_VERSION = 8
 USB_REQ_I2C_MUX_A = 9
 USB_REQ_I2C_MUX_B = 10
+USB_REQ_AP_GET_STATUS = 11
+USB_REQ_AP_SET_MODE = 12
 USB_REQ_AP_PWRBTN = 13
 USB_REQ_AP_SET_ACOK = 14
+USB_REQ_AP_SET_SIGNAL = 15
+
+# AP signals bitmask
+AP_SIG_EN_S5 = 1 << 0
+AP_SIG_RSMRST = 1 << 1
+AP_SIG_SOC_PWRBTN = 1 << 2
+AP_SIG_SYS_PWROK = 1 << 3
+AP_SIG_RSMRST_PWRGD = 1 << 4
+AP_SIG_ALL_SYS_PWRGD = 1 << 5
+AP_SIG_SLP_S5 = 1 << 6
+AP_SIG_SLP_S4 = 1 << 7
+AP_SIG_SLP_S3 = 1 << 8
+AP_SIG_SLP_S0 = 1 << 9
+AP_SIG_EC_PWRBTN = 1 << 10
+AP_SIG_ACOK = 1 << 11
+AP_SIG_PCH_PWROK = 1 << 12
 
 
 def dw_req_power(dev, enable):
@@ -287,6 +305,18 @@ dw_i2c_mux_a_set = dw_i2c_mux_a
 dw_i2c_mux_b_set = dw_i2c_mux_b
 
 
+def dw_ap_get_status(dev):
+    """Get AP status: returns (state, mode, signals)"""
+    buf = dev.ctrl_transfer(TO_HOST_REQ_TYPE, 0, 0, USB_REQ_AP_GET_STATUS, 4)
+    state, mode, signals = struct.unpack("<BBH", buf)
+    return state, mode, signals
+
+
+def dw_ap_set_mode(dev, mode):
+    """Set AP mode: 0 for AUTO, 1 for MANUAL"""
+    dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, mode, USB_REQ_AP_SET_MODE, 0)
+
+
 def dw_ap_pwrbtn(dev, duration_ms=200):
     """Press the EC power button for duration_ms"""
     dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, duration_ms, USB_REQ_AP_PWRBTN, 0)
@@ -296,3 +326,17 @@ def dw_ap_set_acok(dev, enable):
     """Set ACOK signal (True for 1, False for 0)"""
     val = 1 if enable else 0
     dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, val, USB_REQ_AP_SET_ACOK, 0)
+
+
+def dw_ap_set_signal(dev, signal_id, val):
+    """Set individual output signal in manual mode.
+    signal_id:
+      0: RSMRST_PWRGD_L
+      1: ALL_SYS_PWRGD
+      2: SLP_S5_L
+      3: SLP_S4_L
+      4: SLP_S3_L
+      5: SLP_S0_L
+    """
+    arg = ((signal_id & 0xFF) << 8) | (val & 0xFF)
+    dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, arg, USB_REQ_AP_SET_SIGNAL, 0)

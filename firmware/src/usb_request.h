@@ -17,10 +17,47 @@
 #define USB_REQ_VERSION 8
 #define USB_REQ_I2C_MUX_A 9
 #define USB_REQ_I2C_MUX_B 10
+#define USB_REQ_AP_GET_STATUS 11
+#define USB_REQ_AP_SET_MODE 12
 #define USB_REQ_AP_PWRBTN 13
 #define USB_REQ_AP_SET_ACOK 14
+#define USB_REQ_AP_SET_SIGNAL 15
 
 #define USB_REQUEST_MAX_BUF_SIZE 128
+
+enum ap_state {
+	AP_STATE_G3 = 0,
+	AP_STATE_S5 = 1,
+	AP_STATE_S4 = 2,
+	AP_STATE_S3 = 3,
+	AP_STATE_S0 = 4,
+};
+
+enum ap_mode {
+	AP_MODE_AUTO = 0,
+	AP_MODE_MANUAL = 1,
+};
+
+/* Signal bit flags */
+#define AP_SIG_EN_S5 BIT(0)
+#define AP_SIG_RSMRST BIT(1)
+#define AP_SIG_SOC_PWRBTN BIT(2)
+#define AP_SIG_SYS_PWROK BIT(3)
+#define AP_SIG_RSMRST_PWRGD BIT(4)
+#define AP_SIG_ALL_SYS_PWRGD BIT(5)
+#define AP_SIG_SLP_S5 BIT(6)
+#define AP_SIG_SLP_S4 BIT(7)
+#define AP_SIG_SLP_S3 BIT(8)
+#define AP_SIG_SLP_S0 BIT(9)
+#define AP_SIG_EC_PWRBTN BIT(10)
+#define AP_SIG_ACOK BIT(11)
+#define AP_SIG_PCH_PWROK BIT(12)
+
+struct usb_ap_status {
+	uint8_t state;
+	uint8_t mode;
+	uint16_t signals;
+};
 
 struct usb_fan_pwm {
 	uint32_t frequency;

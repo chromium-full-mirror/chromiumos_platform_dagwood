@@ -1,0 +1,67 @@
+# Copyright 2026 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+description: |
+  x86 MTL AP power sequence emulator node for Dagwood.
+  GPIO pins follow the naming convention from the Intel Platform Design Guide.
+  Active low signals use the "-n" and "_n" suffix instead of "#".
+
+compatible: "cros,x86-mtl-emulator"
+
+properties:
+  # Power signals provided to/from the platform
+  en-s5-gpios:
+    type: phandle-array
+    description: |
+      Input to platform from EC - 5V S5 / Rail enable (MECC_EN_PP5000_S5).
+
+  rsmrst-n-gpios:
+    type: phandle-array
+    description: |
+      Input to MTL from EC - Primary reset (MECC_RSMRST_L)
+
+  pwrbtn-n-gpios:
+    type: phandle-array
+    description: |
+      Input to MTL from EC - SoC power button (MECC_SOC_PWRBTN_L)
+
+  sys-pwrok-gpios:
+    type: phandle-array
+    description: |
+      Input to MTL from EC - System Power OK (MECC_SYS_PWROK)
+
+  plt-pwrok-gpios:
+    type: phandle-array
+    description: |
+      Input to MTL from EC - PCH Power OK (MECC_PLT_PWROK)
+
+  rsmrst-pwrgd-gpios:
+    type: phandle-array
+    description: |
+      Platform signal, output to EC - RSMRST Power Good (MECC_RSMRST_PWRGD_L)
+
+  all-sys-pwrgd-gpios:
+    type: phandle-array
+    description: |
+      Platform signal, output to EC - All System Power Good (MECC_ALL_SYS_PWRGD)
+
+  slp-s5-gpios:
+    type: phandle-array
+    description: |
+      MTL output to EC - Sleep S5 (MECC_SLP_S5_L)
+
+  slp-s4-gpios:
+    type: phandle-array
+    description: |
+      MTL output to EC - Sleep S4 (MECC_SLP_S4_L)
+
+  slp-s3-gpios:
+    type: phandle-array
+    description: |
+      MTL output to EC - Sleep S3 (MECC_SLP_S3_L)
+
+  slp-s0-gpios:
+    type: phandle-array
+    description: |
+      MTL output to EC - Sleep S0 (MECC_SLP_S0_L)

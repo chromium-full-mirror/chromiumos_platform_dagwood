@@ -176,6 +176,22 @@
 		       <&pwm5 4 0 PWM_POLARITY_NORMAL>; /* output, fake tach signal to the aic */
 	};
 
+	x86_mtl_emulator: x86-mtl-emulator {
+		compatible = "cros,x86-mtl-emulator";
+		en-s5-gpios = <&gpioc 5 GPIO_ACTIVE_HIGH>;
+		rsmrst-n-gpios = <&gpiod 2 GPIO_ACTIVE_LOW>;
+		pwrbtn-n-gpios = <&gpiod 11 GPIO_ACTIVE_LOW>;
+		sys-pwrok-gpios = <&gpioi 1 GPIO_ACTIVE_HIGH>;
+		plt-pwrok-gpios = <&gpioi 0 GPIO_ACTIVE_HIGH>;
+
+		rsmrst-pwrgd-gpios = <&gpiod 3 GPIO_ACTIVE_HIGH>;
+		all-sys-pwrgd-gpios = <&gpioi 8 GPIO_ACTIVE_HIGH>;
+		slp-s5-gpios = <&gpiod 9 GPIO_ACTIVE_HIGH>;
+		slp-s4-gpios = <&gpiod 8 GPIO_ACTIVE_HIGH>;
+		slp-s3-gpios = <&gpiod 7 GPIO_ACTIVE_HIGH>;
+		slp-s0-gpios = <&gpiod 6 GPIO_ACTIVE_HIGH>;
+	};
+
 	ec_pwrbtn: ec-pwrbtn {
 		compatible = "cros,ec-pwrbtn";
 		ec-pwrbtn-gpios = <&gpioe 2 GPIO_ACTIVE_LOW>;
