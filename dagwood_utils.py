@@ -205,6 +205,7 @@ USB_REQ_IDENTIFY = 7
 USB_REQ_VERSION = 8
 USB_REQ_I2C_MUX_A = 9
 USB_REQ_I2C_MUX_B = 10
+USB_REQ_AP_PWRBTN = 13
 
 
 def dw_req_power(dev, enable):
@@ -283,3 +284,8 @@ def dw_i2c_mux_b(dev, port):
 
 dw_i2c_mux_a_set = dw_i2c_mux_a
 dw_i2c_mux_b_set = dw_i2c_mux_b
+
+
+def dw_ap_pwrbtn(dev, duration_ms=200):
+    """Press the EC power button for duration_ms"""
+    dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, duration_ms, USB_REQ_AP_PWRBTN, 0)

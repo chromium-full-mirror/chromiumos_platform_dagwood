@@ -175,6 +175,11 @@
 		pwms = <&pwm2 3 0 PWM_POLARITY_NORMAL>, /* input, pwm control from aic */
 		       <&pwm5 4 0 PWM_POLARITY_NORMAL>; /* output, fake tach signal to the aic */
 	};
+
+	ec_pwrbtn: ec-pwrbtn {
+		compatible = "cros,ec-pwrbtn";
+		ec-pwrbtn-gpios = <&gpioe 2 GPIO_ACTIVE_LOW>;
+	};
 };
 
 &pinctrl {
