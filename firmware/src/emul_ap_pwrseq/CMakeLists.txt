@@ -3,3 +3,4 @@
 # found in the LICENSE file.
 
 target_sources_ifdef(CONFIG_DT_HAS_CROS_EC_PWRBTN_ENABLED app PRIVATE ec_pwrbtn.c)
+target_sources_ifdef(CONFIG_DT_HAS_CROS_EC_ACOK_ENABLED app PRIVATE ec_acok.c)

@@ -1,0 +1,13 @@
+# Copyright 2026 The ChromiumOS Authors
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+description: Dagwood EC ACOK stimulus driver
+
+compatible: "cros,ec-acok"
+
+properties:
+  acok-gpios:
+    type: phandle-array
+    required: true
+    description: Output pin to EC AIC for ACOK (MECC_ACOK)

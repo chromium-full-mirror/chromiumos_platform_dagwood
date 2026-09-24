@@ -180,6 +180,11 @@
 		compatible = "cros,ec-pwrbtn";
 		ec-pwrbtn-gpios = <&gpioe 2 GPIO_ACTIVE_LOW>;
 	};
+
+	ec_acok: ec-acok {
+		compatible = "cros,ec-acok";
+		acok-gpios = <&gpioe 0 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &pinctrl {
