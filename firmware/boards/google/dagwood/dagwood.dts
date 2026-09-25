@@ -320,11 +320,21 @@ zephyr_i2c: &i2c3 {
 	label = "i2c3";
 };
 
+&adc12_common {
+	st,adc-clock-source = "SYNC";
+	st,adc-prescaler = <4>;
+	status = "okay";
+};
+
+&adc3_common {
+	st,adc-clock-source = "SYNC";
+	st,adc-prescaler = <4>;
+	status = "okay";
+};
+
 &adc1 {
 	pinctrl-0 = <&adc1_inp15_pa3>;
 	pinctrl-names = "default";
-	st,adc-clock-source = "SYNC";
-	st,adc-prescaler = <4>;
 	status = "okay";
 };
 
@@ -358,8 +368,6 @@ zephyr_i2c: &i2c3 {
 &adc3 {
 	pinctrl-0 = <&adc3_inp5_pf3>;
 	pinctrl-names = "default";
-	st,adc-clock-source = "SYNC";
-	st,adc-prescaler = <4>;
 	status = "okay";
 };
 
