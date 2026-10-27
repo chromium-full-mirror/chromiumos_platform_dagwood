@@ -60,10 +60,13 @@ def build_firmware(build_path, args):
     if args.clobber:
         zmake_cmd.append("--clobber")
 
+    env = os.environ.copy()
+    env["ZMAKE_WORKSPACE_PREPARED"] = "1"
+
     subprocess.run(
         zmake_cmd,
         check=True,
-        env=os.environ,
+        env=env,
     )
 
 
