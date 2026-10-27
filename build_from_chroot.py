@@ -16,6 +16,8 @@ import argparse
 import multiprocessing
 import os
 from pathlib import Path
+import re
+import shutil
 import subprocess
 import sys
 
@@ -72,6 +74,12 @@ def build_firmware(build_path, args):
 
 def flash_openocd(build_path):
     """Flash the firmware using OpenOCD."""
+    if not shutil.which("openocd"):
+        raise RuntimeError(
+            "openocd not found in PATH. OpenOCD is required for flashing. "
+            "Please run inside the EC Docker container or install openocd."
+        )
+
     elf_path = (
         build_path
         / PROJECT_NAME
@@ -99,6 +107,11 @@ def flash_openocd(build_path):
 
 def flash_dfu(build_path):
     """Flash the firmware using dfu-util."""
+    if not shutil.which(DFU_UTIL):
+        raise RuntimeError(
+            f"{DFU_UTIL} not found in PATH. Please install {DFU_UTIL}."
+        )
+
     bin_path = (
         build_path
         / PROJECT_NAME
@@ -123,6 +136,74 @@ def flash_dfu(build_path):
         check=True,
         env=os.environ,
     )
+
+
+def get_built_version(build_path):
+    """Read the target firmware version from the generated version.h header."""
+    version_h = (
+        build_path
+        / PROJECT_NAME
+        / "build-singleimage"
+        / "zephyr"
+        / "include"
+        / "generated"
+        / "dagwood"
+        / "version.h"
+    )
+    if not version_h.is_file():
+        return None
+
+    content = version_h.read_text(encoding="utf-8")
+    match = re.search(r'#define\s+DW_VERSION\s+"([^"]+)"', content)
+    if match:
+        return match.group(1)
+    return None
+
+
+def get_running_version(board_id=None):
+    """Query the firmware version currently running on the Dagwood board."""
+    # pylint: disable=import-outside-toplevel
+    import dagwood_utils
+    import usb.core
+
+    try:
+        usb_dev = dagwood_utils.find_usb_device(board_id)
+        return dagwood_utils.dw_version(usb_dev)
+    except (ValueError, usb.core.USBError) as e:
+        print(
+            f"Warning: Could not query running Dagwood firmware version ({e})."
+        )
+        return None
+
+
+def should_flash(build_path, board_id=None, force=False):
+    """Check running vs built firmware version and return True if flash should proceed."""
+    built_version = get_built_version(build_path)
+    running_version = get_running_version(board_id)
+
+    print(
+        f"Dagwood firmware version: running={running_version}, target={built_version}"
+    )
+
+    if (
+        running_version
+        and built_version
+        and running_version != "unknown"
+        and built_version != "dagwood-unknown"
+        and running_version == built_version
+    ):
+        if not force:
+            print(
+                f"Dagwood is already running {running_version}; "
+                "skipping flash (use --force to override)."
+            )
+            return False
+        print(
+            f"Dagwood is already running {running_version}; "
+            "flashing anyway (--force)."
+        )
+
+    return True
 
 
 def main(argv):
@@ -151,6 +232,17 @@ def main(argv):
         "--flash-only",
         action="store_true",
         help="Flash existing firmware without building",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force flashing even if the running firmware version matches the build",
+    )
+    parser.add_argument(
+        "--board-id",
+        type=str,
+        required=False,
+        help="Dagwood board USB serial number",
     )
     parser.add_argument(
         "--flasher",
@@ -190,10 +282,16 @@ def main(argv):
         build_firmware(build_path, args)
 
     if args.flash or args.flash_only:
-        if args.flasher == "openocd":
-            flash_openocd(build_path)
-        elif args.flasher == "dfu":
-            flash_dfu(build_path)
+        if not should_flash(build_path, args.board_id, args.force):
+            return 0
+        try:
+            if args.flasher == "openocd":
+                flash_openocd(build_path)
+            elif args.flasher == "dfu":
+                flash_dfu(build_path)
+        except RuntimeError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
 
 
 if __name__ == "__main__":

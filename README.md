@@ -15,8 +15,11 @@ Build the firmware:
 
 Flash the firmware using an attached ST-Link debugger via OpenOCD:
 ```
-# Build and flash:
+# Build and flash (checks running version and skips if already matching):
 ./build_from_chroot.py -f
+
+# Force flashing even if the running version matches:
+./build_from_chroot.py -f --force
 
 # Or flash an existing build without rebuilding:
 ./build_from_chroot.py --flash-only
