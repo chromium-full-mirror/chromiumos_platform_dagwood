@@ -10,12 +10,14 @@
 #include "ec_pwrbtn.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/shell/shell.h>
+#include <zephyr/sys/minmax.h>
 #include <zephyr/sys/util.h>
 
 LOG_MODULE_REGISTER(x86_mtl_emulator, LOG_LEVEL_INF);
@@ -53,11 +55,148 @@ struct x86_mtl_emulator_data {
 
 	struct k_work ap_work;
 	struct k_work_delayable ap_poll_work;
+
+	/* Previous logical pin states for edge detection */
+	int prev_en_s5;
+	int prev_rsmrst;
+	int prev_pwrbtn;
+	int prev_plt_pwrok;
+	int prev_sys_pwrok;
+	int prev_rsmrst_pwrgd;
+	int prev_all_sys_pwrgd;
+	int prev_slp_s3;
+	bool plt_pwrok_seen_since_all_sys_pwrgd;
+	int64_t s4_entry_ms;
+
+	/* Hardware cycle timestamps of signal transitions */
+	uint32_t rsmrst_pwrgd_assert_cyc;
+	uint32_t all_sys_pwrgd_assert_cyc;
+	uint32_t slp_s3_deassert_cyc;
+	uint32_t slp_s3_assert_cyc;
+	uint32_t rsmrst_deassert_cyc;
+	uint32_t rsmrst_assert_cyc;
+	uint32_t plt_pwrok_assert_cyc;
+	uint32_t sys_pwrok_assert_cyc;
+	uint32_t pwrbtn_assert_cyc;
+
+	struct usb_ap_timings timings;
 };
 
 static const struct device *const emul_dev = DEVICE_DT_INST_GET(0);
 
 static void ap_update_state_machine(const struct device *dev);
+
+static uint32_t calc_elapsed_us(uint32_t start_cyc, uint32_t end_cyc)
+{
+	uint64_t us = k_cyc_to_us_floor64(end_cyc - start_cyc);
+
+	return min(us, UINT32_MAX);
+}
+
+static uint32_t calc_elapsed_ns(uint32_t start_cyc, uint32_t end_cyc)
+{
+	uint64_t ns = k_cyc_to_ns_floor64(end_cyc - start_cyc);
+
+	return min(ns, UINT32_MAX);
+}
+
+static bool ap_set_output_pin(const struct gpio_dt_spec *gpio, int val,
+			      int *prev_val, uint32_t *assert_cyc,
+			      uint32_t *deassert_cyc)
+{
+	int norm_val = val ? 1 : 0;
+
+	gpio_pin_set_dt(gpio, norm_val);
+	if (prev_val == NULL || norm_val == *prev_val) {
+		return false;
+	}
+
+	uint32_t now = k_cycle_get_32();
+
+	if (norm_val && assert_cyc != NULL) {
+		*assert_cyc = now;
+	} else if (!norm_val && deassert_cyc != NULL) {
+		*deassert_cyc = now;
+	}
+	*prev_val = norm_val;
+
+	return true;
+}
+
+static void ap_set_signal(const struct device *dev, enum ap_output_signal sig,
+			  int val)
+{
+	const struct x86_mtl_emulator_config *cfg = dev->config;
+	struct x86_mtl_emulator_data *data = dev->data;
+
+	switch (sig) {
+	case AP_OUT_RSMRST_PWRGD:
+		ap_set_output_pin(&cfg->rsmrst_pwrgd, val,
+				  &data->prev_rsmrst_pwrgd,
+				  &data->rsmrst_pwrgd_assert_cyc, NULL);
+		break;
+	case AP_OUT_ALL_SYS_PWRGD:
+		if (!ap_set_output_pin(&cfg->all_sys_pwrgd, val,
+				       &data->prev_all_sys_pwrgd,
+				       &data->all_sys_pwrgd_assert_cyc, NULL) ||
+		    !val) {
+			break;
+		}
+		data->plt_pwrok_seen_since_all_sys_pwrgd = false;
+		data->timings.slp_s3_to_plt_pwrok_us = 0;
+		data->timings.all_sys_pwrgd_to_plt_pwrok_us = 0;
+		data->timings.all_sys_pwrgd_to_sys_pwrok_us = 0;
+		data->timings.plt_pwrok_to_sys_pwrok_us = 0;
+		break;
+	case AP_OUT_SLP_S5:
+		ap_set_output_pin(&cfg->slp_s5, val, NULL, NULL, NULL);
+		break;
+	case AP_OUT_SLP_S4:
+		ap_set_output_pin(&cfg->slp_s4, val, NULL, NULL, NULL);
+		break;
+	case AP_OUT_SLP_S3:
+		if (!ap_set_output_pin(&cfg->slp_s3, val, &data->prev_slp_s3,
+				       &data->slp_s3_deassert_cyc,
+				       &data->slp_s3_assert_cyc) ||
+		    val) {
+			break;
+		}
+		data->timings.slp_s3_assert_to_plt_pwrok_deassert_us = 0;
+		break;
+	case AP_OUT_SLP_S0:
+		ap_set_output_pin(&cfg->slp_s0, val, NULL, NULL, NULL);
+		break;
+	default:
+		break;
+	}
+}
+
+static void ap_check_sys_pwrok(const struct device *dev, uint32_t now)
+{
+	const struct x86_mtl_emulator_config *cfg = dev->config;
+	struct x86_mtl_emulator_data *data = dev->data;
+	int sys_pwrok = gpio_pin_get_dt(&cfg->sys_pwrok);
+
+	if (sys_pwrok == data->prev_sys_pwrok) {
+		return;
+	}
+	data->prev_sys_pwrok = sys_pwrok;
+
+	if (!sys_pwrok) {
+		return;
+	}
+
+	data->sys_pwrok_assert_cyc = now;
+	data->timings.all_sys_pwrgd_to_sys_pwrok_us =
+		calc_elapsed_us(data->all_sys_pwrgd_assert_cyc, now);
+
+	if (data->plt_pwrok_seen_since_all_sys_pwrgd) {
+		data->timings.plt_pwrok_to_sys_pwrok_us =
+			calc_elapsed_us(data->plt_pwrok_assert_cyc, now);
+	} else {
+		data->timings.plt_pwrok_to_sys_pwrok_us = 0;
+	}
+}
 
 static void ap_work_handler(struct k_work *work)
 {
@@ -76,14 +215,120 @@ static void ap_poll_work_handler(struct k_work *work)
 	ap_update_state_machine(data->dev);
 }
 
-static void gpio_event_callback(const struct device *port,
-				struct gpio_callback *cb, uint32_t pins)
+static void rsmrst_n_callback(const struct device *port,
+			      struct gpio_callback *cb, uint32_t pins)
 {
+	const struct x86_mtl_emulator_config *cfg = emul_dev->config;
 	struct x86_mtl_emulator_data *data = emul_dev->data;
+	uint32_t now = k_cycle_get_32();
+	int rsmrst = gpio_pin_get_dt(&cfg->rsmrst_n);
 
 	ARG_UNUSED(port);
 	ARG_UNUSED(cb);
 	ARG_UNUSED(pins);
+
+	if (rsmrst != data->prev_rsmrst) {
+		if (rsmrst) {
+			data->rsmrst_assert_cyc = now;
+		} else {
+			data->rsmrst_deassert_cyc = now;
+			data->timings.rsmrst_pwrgd_to_rsmrst_deassert_us =
+				calc_elapsed_us(data->rsmrst_pwrgd_assert_cyc,
+						now);
+		}
+		data->prev_rsmrst = rsmrst;
+	}
+
+	k_work_submit(&data->ap_work);
+}
+
+static void en_s5_callback(const struct device *port, struct gpio_callback *cb,
+			   uint32_t pins)
+{
+	const struct x86_mtl_emulator_config *cfg = emul_dev->config;
+	struct x86_mtl_emulator_data *data = emul_dev->data;
+	uint32_t now = k_cycle_get_32();
+	int en_s5 = gpio_pin_get_dt(&cfg->en_s5);
+
+	ARG_UNUSED(port);
+	ARG_UNUSED(cb);
+	ARG_UNUSED(pins);
+
+	if (en_s5 == data->prev_en_s5) {
+		k_work_submit(&data->ap_work);
+		return;
+	}
+	data->prev_en_s5 = en_s5;
+
+	if (en_s5) {
+		data->timings.rsmrst_assert_to_en_s5_deassert_ns = 0;
+	} else if (data->prev_rsmrst) {
+		data->timings.rsmrst_assert_to_en_s5_deassert_ns =
+			calc_elapsed_ns(data->rsmrst_assert_cyc, now);
+	} else {
+		data->timings.rsmrst_assert_to_en_s5_deassert_ns = 0;
+	}
+
+	if (data->current_mode == AP_MODE_AUTO) {
+		ap_set_signal(emul_dev, AP_OUT_RSMRST_PWRGD, en_s5);
+	}
+
+	k_work_submit(&data->ap_work);
+}
+
+static void plt_pwrok_callback(const struct device *port,
+			       struct gpio_callback *cb, uint32_t pins)
+{
+	const struct x86_mtl_emulator_config *cfg = emul_dev->config;
+	struct x86_mtl_emulator_data *data = emul_dev->data;
+	uint32_t now = k_cycle_get_32();
+	int plt_pwrok = gpio_pin_get_dt(&cfg->plt_pwrok);
+
+	ARG_UNUSED(port);
+	ARG_UNUSED(cb);
+	ARG_UNUSED(pins);
+
+	if (plt_pwrok != data->prev_plt_pwrok) {
+		if (plt_pwrok) {
+			data->plt_pwrok_assert_cyc = now;
+			data->plt_pwrok_seen_since_all_sys_pwrgd = true;
+			data->timings.slp_s3_to_plt_pwrok_us =
+				calc_elapsed_us(data->slp_s3_deassert_cyc, now);
+			data->timings.all_sys_pwrgd_to_plt_pwrok_us =
+				calc_elapsed_us(data->all_sys_pwrgd_assert_cyc,
+						now);
+		} else {
+			data->timings.slp_s3_assert_to_plt_pwrok_deassert_us =
+				calc_elapsed_us(data->slp_s3_assert_cyc, now);
+		}
+		data->prev_plt_pwrok = plt_pwrok;
+	}
+
+	ap_check_sys_pwrok(emul_dev, now);
+	k_work_submit(&data->ap_work);
+}
+
+static void pwrbtn_n_callback(const struct device *port,
+			      struct gpio_callback *cb, uint32_t pins)
+{
+	const struct x86_mtl_emulator_config *cfg = emul_dev->config;
+	struct x86_mtl_emulator_data *data = emul_dev->data;
+	uint32_t now = k_cycle_get_32();
+	int pwrbtn = gpio_pin_get_dt(&cfg->pwrbtn_n);
+
+	ARG_UNUSED(port);
+	ARG_UNUSED(cb);
+	ARG_UNUSED(pins);
+
+	if (pwrbtn != data->prev_pwrbtn) {
+		if (pwrbtn) {
+			data->pwrbtn_assert_cyc = now;
+		} else {
+			data->timings.pwrbtn_pulse_width_us =
+				calc_elapsed_us(data->pwrbtn_assert_cyc, now);
+		}
+		data->prev_pwrbtn = pwrbtn;
+	}
 
 	k_work_submit(&data->ap_work);
 }
@@ -93,7 +338,12 @@ static void ap_update_state_machine(const struct device *dev)
 	const struct x86_mtl_emulator_config *cfg = dev->config;
 	struct x86_mtl_emulator_data *data = dev->data;
 
+	ap_check_sys_pwrok(dev, k_cycle_get_32());
+
 	if (data->current_mode != AP_MODE_AUTO) {
+		if (!data->prev_slp_s3 && data->prev_sys_pwrok) {
+			k_work_reschedule(&data->ap_poll_work, K_USEC(250));
+		}
 		return;
 	}
 
@@ -108,58 +358,63 @@ static void ap_update_state_machine(const struct device *dev)
 
 	/* Check for power-down or reset conditions */
 	if (!en_s5 || rsmrst) {
-		/* EN_S5 deasserted or RSMRST asserted -> reset back to G3 or S5
-		 * unpowered */
+		/* EN_S5 deasserted or RSMRST asserted -> reset back to G3 */
 		if (data->current_state != AP_STATE_G3) {
 			LOG_INF("AP SM: RSMRST asserted or EN_S5 deasserted -> "
 				"G3");
 			data->current_state = AP_STATE_G3;
-			gpio_pin_set_dt(&cfg->all_sys_pwrgd, 0);
-			gpio_pin_set_dt(&cfg->slp_s5, 0);
-			gpio_pin_set_dt(&cfg->slp_s4, 0);
-			gpio_pin_set_dt(&cfg->slp_s3, 0);
-			gpio_pin_set_dt(&cfg->slp_s0, 0);
+			ap_set_signal(dev, AP_OUT_ALL_SYS_PWRGD, 0);
+			ap_set_signal(dev, AP_OUT_SLP_S5, 0);
+			ap_set_signal(dev, AP_OUT_SLP_S4, 0);
+			ap_set_signal(dev, AP_OUT_SLP_S3, 0);
+			ap_set_signal(dev, AP_OUT_SLP_S0, 0);
 		}
-		gpio_pin_set_dt(&cfg->rsmrst_pwrgd, en_s5 ? 1 : 0);
-		if (en_s5) {
-			k_work_reschedule(&data->ap_poll_work, K_MSEC(20));
-		}
+		ap_set_signal(dev, AP_OUT_RSMRST_PWRGD, en_s5 ? 1 : 0);
 		return;
 	}
 
 	/* Assert RSMRST_PWRGD once the EC powers up the S5 rails. */
-	gpio_pin_set_dt(&cfg->rsmrst_pwrgd, 1);
+	ap_set_signal(dev, AP_OUT_RSMRST_PWRGD, 1);
 
 	switch (data->current_state) {
 	case AP_STATE_G3:
-		/* Transition G3 -> S5 -> S4 -> S3.
-		 * Actual hardware doesn't have a minimum delay between
-		 * SLP_S5#, SLP_S4#, and SLP_S3# deassertion so we transition
-		 * directly from G3 to S3.
+	case AP_STATE_S5:
+		/* Transition G3 -> S4 by deasserting SLP_S5# and SLP_S4# first.
+		 * Hold in S4 briefly so the EC transitions S5 -> S4 -> S3
+		 * before SLP_S3# deasserts and ALL_SYS_PWRGD asserts.
 		 */
-		LOG_INF("AP SM: G3 -> S3");
+		LOG_INF("AP SM: G3 -> S4");
+		data->current_state = AP_STATE_S4;
+		data->s4_entry_ms = k_uptime_get();
+		ap_set_signal(dev, AP_OUT_SLP_S5, 1);
+		ap_set_signal(dev, AP_OUT_SLP_S4, 1);
+		k_work_reschedule(&data->ap_poll_work, K_MSEC(15));
+		return;
+
+	case AP_STATE_S4:
+		if ((k_uptime_get() - data->s4_entry_ms) < 15) {
+			k_work_reschedule(&data->ap_poll_work, K_MSEC(5));
+			return;
+		}
+		LOG_INF("AP SM: S4 -> S3");
 		data->current_state = AP_STATE_S3;
-		gpio_pin_set_dt(&cfg->slp_s5, 1);
-		gpio_pin_set_dt(&cfg->slp_s4, 1);
-		gpio_pin_set_dt(&cfg->slp_s3, 1);
-		gpio_pin_set_dt(&cfg->all_sys_pwrgd, 1);
+		ap_set_signal(dev, AP_OUT_SLP_S3, 1);
+		ap_set_signal(dev, AP_OUT_ALL_SYS_PWRGD, 1);
 		/* If pch_pwrok and sys_pwrok are already high, proceed to S0 */
 		if (pch_pwrok && sys_pwrok) {
 			LOG_INF("AP SM: pch_pwrok & sys_pwrok high -> S0");
 			data->current_state = AP_STATE_S0;
-			gpio_pin_set_dt(&cfg->slp_s0, 1);
+			ap_set_signal(dev, AP_OUT_SLP_S0, 1);
 		}
 		break;
 
-	case AP_STATE_S5:
-	case AP_STATE_S4:
 	case AP_STATE_S3:
-		gpio_pin_set_dt(&cfg->all_sys_pwrgd, 1);
+		ap_set_signal(dev, AP_OUT_ALL_SYS_PWRGD, 1);
 		if (pch_pwrok && sys_pwrok) {
 			LOG_INF("AP SM: S3 -> S0 "
 				"(pch_pwrok & sys_pwrok asserted)");
 			data->current_state = AP_STATE_S0;
-			gpio_pin_set_dt(&cfg->slp_s0, 1);
+			ap_set_signal(dev, AP_OUT_SLP_S0, 1);
 		}
 		break;
 
@@ -167,12 +422,16 @@ static void ap_update_state_machine(const struct device *dev)
 		if (!pch_pwrok || !sys_pwrok) {
 			LOG_INF("AP SM: pwrok deasserted -> S3");
 			data->current_state = AP_STATE_S3;
-			gpio_pin_set_dt(&cfg->slp_s0, 0);
+			ap_set_signal(dev, AP_OUT_SLP_S0, 0);
 		}
 		break;
 	}
 
-	k_work_reschedule(&data->ap_poll_work, K_MSEC(20));
+	k_work_reschedule(&data->ap_poll_work,
+			  (data->current_state == AP_STATE_S3 ||
+			   pch_pwrok != sys_pwrok) ?
+				  K_USEC(250) :
+				  K_MSEC(20));
 }
 
 static uint16_t ap_get_signals_bitmask(const struct device *dev)
@@ -269,6 +528,35 @@ static int cmd_ap_status(const struct shell *sh, size_t argc, char **argv)
 	return 0;
 }
 
+static int cmd_ap_timings(const struct shell *sh, size_t argc, char **argv)
+{
+	struct x86_mtl_emulator_data *data = emul_dev->data;
+	const struct usb_ap_timings *t = &data->timings;
+
+	ARG_UNUSED(argc);
+	ARG_UNUSED(argv);
+
+	shell_print(sh, "AP Power Sequence Timings:");
+	shell_print(sh, "  tPCH03 (RSMRST_PWRGD -> RSMRST# deassert): %u us",
+		    t->rsmrst_pwrgd_to_rsmrst_deassert_us);
+	shell_print(sh, "  tPCH08 (SLP_S3# deassert -> PLT_PWROK):    %u us",
+		    t->slp_s3_to_plt_pwrok_us);
+	shell_print(sh, "  tPLT04 (ALL_SYS_PWRGD -> PLT_PWROK):       %u us",
+		    t->all_sys_pwrgd_to_plt_pwrok_us);
+	shell_print(sh, "  tPLT05 (ALL_SYS_PWRGD -> SYS_PWROK):       %u us",
+		    t->all_sys_pwrgd_to_sys_pwrok_us);
+	shell_print(sh, "  PWROK delta (PLT_PWROK -> SYS_PWROK):      %u us",
+		    t->plt_pwrok_to_sys_pwrok_us);
+	shell_print(sh, "  tCPU22 (SLP_S3# assert -> PLT_PWROK low):  %u us",
+		    t->slp_s3_assert_to_plt_pwrok_deassert_us);
+	shell_print(sh, "  tPCH12 (RSMRST# assert -> EN_S5 low):      %u ns",
+		    t->rsmrst_assert_to_en_s5_deassert_ns);
+	shell_print(sh, "  tPCH43 (PWRBTN# pulse width):              %u us",
+		    t->pwrbtn_pulse_width_us);
+
+	return 0;
+}
+
 static int cmd_ap_mode(const struct shell *sh, size_t argc, char **argv)
 {
 	struct x86_mtl_emulator_data *data = emul_dev->data;
@@ -296,7 +584,17 @@ static int cmd_ap_mode(const struct shell *sh, size_t argc, char **argv)
 
 static int cmd_ap_set(const struct shell *sh, size_t argc, char **argv)
 {
-	const struct x86_mtl_emulator_config *cfg = emul_dev->config;
+	static const struct {
+		const char *name;
+		enum ap_output_signal sig;
+	} ap_signals[] = {
+		{ "rsmrst_pwrgd", AP_OUT_RSMRST_PWRGD },
+		{ "all_sys_pwrgd", AP_OUT_ALL_SYS_PWRGD },
+		{ "slp_s5", AP_OUT_SLP_S5 },
+		{ "slp_s4", AP_OUT_SLP_S4 },
+		{ "slp_s3", AP_OUT_SLP_S3 },
+		{ "slp_s0", AP_OUT_SLP_S0 },
+	};
 
 	if (argc < 3) {
 		shell_error(sh, "Usage: ap set <signal> <0|1>");
@@ -308,31 +606,24 @@ static int cmd_ap_set(const struct shell *sh, size_t argc, char **argv)
 	const char *sig = argv[1];
 	int val = atoi(argv[2]);
 
-	if (strcmp(sig, "rsmrst_pwrgd") == 0) {
-		gpio_pin_set_dt(&cfg->rsmrst_pwrgd, val);
-	} else if (strcmp(sig, "all_sys_pwrgd") == 0) {
-		gpio_pin_set_dt(&cfg->all_sys_pwrgd, val);
-	} else if (strcmp(sig, "slp_s5") == 0) {
-		gpio_pin_set_dt(&cfg->slp_s5, val);
-	} else if (strcmp(sig, "slp_s4") == 0) {
-		gpio_pin_set_dt(&cfg->slp_s4, val);
-	} else if (strcmp(sig, "slp_s3") == 0) {
-		gpio_pin_set_dt(&cfg->slp_s3, val);
-	} else if (strcmp(sig, "slp_s0") == 0) {
-		gpio_pin_set_dt(&cfg->slp_s0, val);
-	} else {
-		shell_error(sh, "Unknown signal: %s", sig);
-		return -EINVAL;
+	for (size_t i = 0; i < ARRAY_SIZE(ap_signals); i++) {
+		if (strcmp(sig, ap_signals[i].name) == 0) {
+			ap_set_signal(emul_dev, ap_signals[i].sig, val);
+			shell_print(sh, "Set %s to %d", sig, val);
+			return 0;
+		}
 	}
 
-	shell_print(sh, "Set %s to %d", sig, val);
-	return 0;
+	shell_error(sh, "Unknown signal: %s", sig);
+	return -EINVAL;
 }
 
 SHELL_STATIC_SUBCMD_SET_CREATE(
 	ap_cmds,
 	SHELL_CMD_ARG(status, NULL, "Show AP status and signals", cmd_ap_status,
 		      1, 0),
+	SHELL_CMD_ARG(timings, NULL, "Show AP power sequence timings",
+		      cmd_ap_timings, 1, 0),
 	SHELL_CMD_ARG(mode, NULL, "Set/get AP mode: ap mode [auto|manual]",
 		      cmd_ap_mode, 1, 1),
 	SHELL_CMD_ARG(set, NULL, "Set output signal: ap set <signal> <0|1>",
@@ -344,7 +635,6 @@ SHELL_CMD_REGISTER(ap, &ap_cmds, "AP emulator commands", NULL);
 static void x86_mtl_emulator_to_dev(uint16_t index, uint16_t value,
 				    const uint8_t *buf, size_t size)
 {
-	const struct x86_mtl_emulator_config *cfg = emul_dev->config;
 	struct x86_mtl_emulator_data *data = emul_dev->data;
 
 	ARG_UNUSED(buf);
@@ -359,29 +649,11 @@ static void x86_mtl_emulator_to_dev(uint16_t index, uint16_t value,
 		}
 		break;
 	case USB_REQ_AP_SET_SIGNAL: {
-		uint8_t sig_id = (value >> 8) & 0xFF;
+		enum ap_output_signal sig_id = (value >> 8) & 0xFF;
 		uint8_t sig_val = value & 0xFF;
 
-		switch (sig_id) {
-		case 0:
-			gpio_pin_set_dt(&cfg->rsmrst_pwrgd, sig_val);
-			break;
-		case 1:
-			gpio_pin_set_dt(&cfg->all_sys_pwrgd, sig_val);
-			break;
-		case 2:
-			gpio_pin_set_dt(&cfg->slp_s5, sig_val);
-			break;
-		case 3:
-			gpio_pin_set_dt(&cfg->slp_s4, sig_val);
-			break;
-		case 4:
-			gpio_pin_set_dt(&cfg->slp_s3, sig_val);
-			break;
-		case 5:
-			gpio_pin_set_dt(&cfg->slp_s0, sig_val);
-			break;
-		}
+		ap_set_signal(emul_dev, sig_id, sig_val);
+		k_work_submit(&data->ap_work);
 		break;
 	}
 	default:
@@ -396,24 +668,51 @@ static int x86_mtl_emulator_to_host(uint16_t index, uint16_t value,
 
 	ARG_UNUSED(value);
 
-	if (index != USB_REQ_AP_GET_STATUS) {
-		return 0;
+	if (index == USB_REQ_AP_GET_STATUS) {
+		if (size < sizeof(struct usb_ap_status)) {
+			return -ENOMEM;
+		}
+
+		struct usb_ap_status *status = (struct usb_ap_status *)buf;
+
+		status->state = data->current_state;
+		status->mode = data->current_mode;
+		status->signals = ap_get_signals_bitmask(emul_dev);
+
+		return sizeof(struct usb_ap_status);
+	} else if (index == USB_REQ_AP_GET_TIMINGS) {
+		if (size < sizeof(struct usb_ap_timings)) {
+			return -ENOMEM;
+		}
+
+		memcpy(buf, &data->timings, sizeof(struct usb_ap_timings));
+		return sizeof(struct usb_ap_timings);
 	}
 
-	if (size < sizeof(struct usb_ap_status)) {
-		return -ENOMEM;
-	}
-
-	struct usb_ap_status *status = (struct usb_ap_status *)buf;
-
-	status->state = data->current_state;
-	status->mode = data->current_mode;
-	status->signals = ap_get_signals_bitmask(emul_dev);
-
-	return sizeof(struct usb_ap_status);
+	return 0;
 }
 
 USB_REQUEST_CALLBACK_DEFINE(x86_mtl_emulator_to_dev, x86_mtl_emulator_to_host);
+
+static int configure_input_irq(const struct gpio_dt_spec *spec,
+			       struct gpio_callback *cb,
+			       gpio_callback_handler_t handler)
+{
+	int ret;
+
+	ret = gpio_pin_configure_dt(spec, GPIO_INPUT);
+	if (ret < 0) {
+		return ret;
+	}
+
+	gpio_init_callback(cb, handler, BIT(spec->pin));
+	ret = gpio_add_callback(spec->port, cb);
+	if (ret < 0) {
+		return ret;
+	}
+
+	return gpio_pin_interrupt_configure_dt(spec, GPIO_INT_EDGE_BOTH);
+}
 
 static int x86_mtl_emulator_init(const struct device *dev)
 {
@@ -448,33 +747,23 @@ static int x86_mtl_emulator_init(const struct device *dev)
 	gpio_pin_configure_dt(&cfg->slp_s0, GPIO_OUTPUT_INACTIVE);
 
 	/* Configure inputs with interrupts */
-	gpio_pin_configure_dt(&cfg->en_s5, GPIO_INPUT);
-	gpio_init_callback(&data->cb_en_s5, gpio_event_callback,
-			   BIT(cfg->en_s5.pin));
-	gpio_add_callback(cfg->en_s5.port, &data->cb_en_s5);
-	gpio_pin_interrupt_configure_dt(&cfg->en_s5, GPIO_INT_EDGE_BOTH);
-
-	gpio_pin_configure_dt(&cfg->rsmrst_n, GPIO_INPUT);
-	gpio_init_callback(&data->cb_rsmrst_n, gpio_event_callback,
-			   BIT(cfg->rsmrst_n.pin));
-	gpio_add_callback(cfg->rsmrst_n.port, &data->cb_rsmrst_n);
-	gpio_pin_interrupt_configure_dt(&cfg->rsmrst_n, GPIO_INT_EDGE_BOTH);
-
-	gpio_pin_configure_dt(&cfg->pwrbtn_n, GPIO_INPUT);
-	gpio_init_callback(&data->cb_pwrbtn_n, gpio_event_callback,
-			   BIT(cfg->pwrbtn_n.pin));
-	gpio_add_callback(cfg->pwrbtn_n.port, &data->cb_pwrbtn_n);
-	gpio_pin_interrupt_configure_dt(&cfg->pwrbtn_n, GPIO_INT_EDGE_BOTH);
-
-	gpio_pin_configure_dt(&cfg->plt_pwrok, GPIO_INPUT);
-	gpio_init_callback(&data->cb_plt_pwrok, gpio_event_callback,
-			   BIT(cfg->plt_pwrok.pin));
-	gpio_add_callback(cfg->plt_pwrok.port, &data->cb_plt_pwrok);
-	gpio_pin_interrupt_configure_dt(&cfg->plt_pwrok, GPIO_INT_EDGE_BOTH);
+	configure_input_irq(&cfg->en_s5, &data->cb_en_s5, en_s5_callback);
+	configure_input_irq(&cfg->rsmrst_n, &data->cb_rsmrst_n,
+			    rsmrst_n_callback);
+	configure_input_irq(&cfg->pwrbtn_n, &data->cb_pwrbtn_n,
+			    pwrbtn_n_callback);
+	configure_input_irq(&cfg->plt_pwrok, &data->cb_plt_pwrok,
+			    plt_pwrok_callback);
 
 	/* Note: PI01 shares EXTI1 with PB01 (user_button). Polled in
 	 * ap_poll_work. */
 	gpio_pin_configure_dt(&cfg->sys_pwrok, GPIO_INPUT);
+
+	data->prev_en_s5 = gpio_pin_get_dt(&cfg->en_s5);
+	data->prev_rsmrst = gpio_pin_get_dt(&cfg->rsmrst_n);
+	data->prev_pwrbtn = gpio_pin_get_dt(&cfg->pwrbtn_n);
+	data->prev_plt_pwrok = gpio_pin_get_dt(&cfg->plt_pwrok);
+	data->prev_sys_pwrok = gpio_pin_get_dt(&cfg->sys_pwrok);
 
 	/* Initial evaluation */
 	ap_update_state_machine(dev);

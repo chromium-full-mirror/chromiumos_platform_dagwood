@@ -216,6 +216,7 @@ USB_REQ_AP_PWRBTN = 13
 USB_REQ_AP_SET_ACOK = 14
 USB_REQ_AP_SET_SIGNAL = 15
 USB_REQ_DFU = 16
+USB_REQ_AP_GET_TIMINGS = 17
 
 # AP signals bitmask
 AP_SIG_EN_S5 = 1 << 0
@@ -231,6 +232,14 @@ AP_SIG_SLP_S0 = 1 << 9
 AP_SIG_EC_PWRBTN = 1 << 10
 AP_SIG_ACOK = 1 << 11
 AP_SIG_PCH_PWROK = 1 << 12
+
+# AP output signal IDs (enum ap_output_signal)
+AP_OUT_RSMRST_PWRGD = 0
+AP_OUT_ALL_SYS_PWRGD = 1
+AP_OUT_SLP_S5 = 2
+AP_OUT_SLP_S4 = 3
+AP_OUT_SLP_S3 = 4
+AP_OUT_SLP_S0 = 5
 
 
 def dw_req_power(dev, enable):
@@ -345,13 +354,45 @@ def dw_ap_set_acok(dev, enable):
 
 def dw_ap_set_signal(dev, signal_id, val):
     """Set individual output signal in manual mode.
+
     signal_id:
-      0: RSMRST_PWRGD_L
-      1: ALL_SYS_PWRGD
-      2: SLP_S5_L
-      3: SLP_S4_L
-      4: SLP_S3_L
-      5: SLP_S0_L
+      AP_OUT_RSMRST_PWRGD (0): RSMRST_PWRGD_L
+      AP_OUT_ALL_SYS_PWRGD (1): ALL_SYS_PWRGD
+      AP_OUT_SLP_S5 (2): SLP_S5_L
+      AP_OUT_SLP_S4 (3): SLP_S4_L
+      AP_OUT_SLP_S3 (4): SLP_S3_L
+      AP_OUT_SLP_S0 (5): SLP_S0_L
     """
     arg = ((signal_id & 0xFF) << 8) | (val & 0xFF)
     dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, arg, USB_REQ_AP_SET_SIGNAL, 0)
+
+
+def dw_ap_get_timings(dev):
+    """Get AP power sequencing timings in microseconds/nanoseconds."""
+    buf = dev.ctrl_transfer(TO_HOST_REQ_TYPE, 0, 0, USB_REQ_AP_GET_TIMINGS, 32)
+    (
+        rsmrst_pwrgd_to_rsmrst_deassert_us,
+        slp_s3_to_plt_pwrok_us,
+        all_sys_pwrgd_to_plt_pwrok_us,
+        all_sys_pwrgd_to_sys_pwrok_us,
+        plt_pwrok_to_sys_pwrok_us,
+        slp_s3_assert_to_plt_pwrok_deassert_us,
+        rsmrst_assert_to_en_s5_deassert_ns,
+        pwrbtn_pulse_width_us,
+    ) = struct.unpack("<IIIIIIII", buf)
+    return {
+        "rsmrst_pwrgd_to_rsmrst_deassert_us": (
+            rsmrst_pwrgd_to_rsmrst_deassert_us
+        ),
+        "slp_s3_to_plt_pwrok_us": slp_s3_to_plt_pwrok_us,
+        "all_sys_pwrgd_to_plt_pwrok_us": all_sys_pwrgd_to_plt_pwrok_us,
+        "all_sys_pwrgd_to_sys_pwrok_us": all_sys_pwrgd_to_sys_pwrok_us,
+        "plt_pwrok_to_sys_pwrok_us": plt_pwrok_to_sys_pwrok_us,
+        "slp_s3_assert_to_plt_pwrok_deassert_us": (
+            slp_s3_assert_to_plt_pwrok_deassert_us
+        ),
+        "rsmrst_assert_to_en_s5_deassert_ns": (
+            rsmrst_assert_to_en_s5_deassert_ns
+        ),
+        "pwrbtn_pulse_width_us": pwrbtn_pulse_width_us,
+    }

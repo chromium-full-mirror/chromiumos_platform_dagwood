@@ -178,11 +178,17 @@
 
 	x86_mtl_emulator: x86-mtl-emulator {
 		compatible = "cros,x86-mtl-emulator";
-		en-s5-gpios = <&gpioc 5 GPIO_ACTIVE_HIGH>;
+		/* MECC Pin 55 (MECC_EN_S5_RAILS) -> PC06 */
+		en-s5-gpios = <&gpioc 6 GPIO_ACTIVE_HIGH>;
 		rsmrst-n-gpios = <&gpiod 2 GPIO_ACTIVE_LOW>;
 		pwrbtn-n-gpios = <&gpiod 11 GPIO_ACTIVE_LOW>;
 		sys-pwrok-gpios = <&gpioi 1 GPIO_ACTIVE_HIGH>;
-		plt-pwrok-gpios = <&gpioi 0 GPIO_ACTIVE_HIGH>;
+		/*
+		 * TODO(b/580052406): Canonical MECC Pin 30 (MECC_PLT_PWROK, PI00)
+		 * is stuck high on rtk-aic + Dagwood hardware. Route PLT_PWROK
+		 * via MECC Pin 145 (MECC_EC_PP5000_USBA, PI05) until resolved.
+		 */
+		plt-pwrok-gpios = <&gpioi 5 GPIO_ACTIVE_HIGH>;
 
 		rsmrst-pwrgd-gpios = <&gpiod 3 GPIO_ACTIVE_HIGH>;
 		all-sys-pwrgd-gpios = <&gpioi 8 GPIO_ACTIVE_HIGH>;

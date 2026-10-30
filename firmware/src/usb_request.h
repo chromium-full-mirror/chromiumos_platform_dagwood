@@ -23,6 +23,7 @@
 #define USB_REQ_AP_SET_ACOK 14
 #define USB_REQ_AP_SET_SIGNAL 15
 #define USB_REQ_DFU 16
+#define USB_REQ_AP_GET_TIMINGS 17
 
 #define USB_REQUEST_MAX_BUF_SIZE 128
 
@@ -37,6 +38,15 @@ enum ap_state {
 enum ap_mode {
 	AP_MODE_AUTO = 0,
 	AP_MODE_MANUAL = 1,
+};
+
+enum ap_output_signal {
+	AP_OUT_RSMRST_PWRGD = 0,
+	AP_OUT_ALL_SYS_PWRGD = 1,
+	AP_OUT_SLP_S5 = 2,
+	AP_OUT_SLP_S4 = 3,
+	AP_OUT_SLP_S3 = 4,
+	AP_OUT_SLP_S0 = 5,
 };
 
 /* Signal bit flags */
@@ -58,6 +68,17 @@ struct usb_ap_status {
 	uint8_t state;
 	uint8_t mode;
 	uint16_t signals;
+};
+
+struct usb_ap_timings {
+	uint32_t rsmrst_pwrgd_to_rsmrst_deassert_us;
+	uint32_t slp_s3_to_plt_pwrok_us;
+	uint32_t all_sys_pwrgd_to_plt_pwrok_us;
+	uint32_t all_sys_pwrgd_to_sys_pwrok_us;
+	uint32_t plt_pwrok_to_sys_pwrok_us;
+	uint32_t slp_s3_assert_to_plt_pwrok_deassert_us;
+	uint32_t rsmrst_assert_to_en_s5_deassert_ns;
+	uint32_t pwrbtn_pulse_width_us;
 };
 
 struct usb_fan_pwm {
