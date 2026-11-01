@@ -3,4 +3,5 @@
 # found in the LICENSE file.
 
 config BOARD_DAGWOOD
+	select SOC_EARLY_RESET_HOOK
 	select SOC_STM32H743XX

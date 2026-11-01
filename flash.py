@@ -63,6 +63,10 @@ def main(argv):
         dagwood_utils.dw_reboot(usb_dev)
         sys.exit(0)
 
+    if args.dfu:
+        dagwood_utils.dw_dfu(usb_dev)
+        sys.exit(0)
+
     if not args.board and not args.build_dir:
         print(f"Either --board or --build-dir has to be specified")
         sys.exit(1)

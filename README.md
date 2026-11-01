@@ -107,16 +107,24 @@ depending on what's hardware is available.
 
 #### USB-DFU
 
-Just for flashing, uses the embedded USB DFU bootloader, requires no additional
-hardware. Put the board in DFU mode (press NRST while holding the BOOT0 button)
-and then run:
+Just for flashing, uses the embedded USB DFU bootloader and requires no
+additional debugging hardware.
+
+When flashing via `build_from_chroot.py`, a running Dagwood board is
+automatically switched into DFU mode over USB and automatically resets back
+into the programmed firmware image once flashing completes:
+
+```
+./build_from_chroot.py -f --flasher dfu
+```
+
+You can also manually place a running Dagwood board into DFU mode from the host
+(`./flash.py --dfu`), from the Dagwood UART shell (`dfu`), or using the
+hardware buttons (press NRST while holding the BOOT0 button), and then run:
 
 ```
 west flash -r dfu-util
 ```
-
-NOTE: flashing with dfu-util normally fails in an error and requires a manual
-reset of the board
 
 #### JLink
 

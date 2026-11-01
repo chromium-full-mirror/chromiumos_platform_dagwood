@@ -20,11 +20,19 @@ import re
 import shutil
 import subprocess
 import sys
+import time
+
+import dagwood_utils
+import usb.core
 
 
 SELF_PATH = Path(__file__).parent.resolve()
 DFU_UTIL = "dfu-util"
-DEVICE_USB_ID = "0483:df11"
+DAGWOOD_USB_VID = 0x18D1
+DAGWOOD_USB_PID = 0x5214
+DFU_USB_VID = 0x0483
+DFU_USB_PID = 0xDF11
+DEVICE_USB_ID = f"{DFU_USB_VID:04x}:{DFU_USB_PID:04x}"
 PROJECT_NAME = "dagwood"
 OPENOCD_CFG = (
     SELF_PATH
@@ -105,7 +113,58 @@ def flash_openocd(build_path):
     )
 
 
-def flash_dfu(build_path):
+def is_usb_device_present(vid, pid, serial=None):
+    """Check if a USB device with the given VID:PID (and serial) is present."""
+    kwargs = {"idVendor": vid, "idProduct": pid}
+    if serial is not None:
+        kwargs["serial_number"] = serial
+    return usb.core.find(**kwargs) is not None
+
+
+def enter_dfu_if_needed(board_id=None, timeout_s=5.0):
+    """Ensure the Dagwood board is in STM32 DFU mode, triggering it via USB."""
+    # Note: this matches any connected STM32 device in DFU mode since the ROM
+    # bootloader DFU descriptor cannot be filtered by Dagwood board serial.
+    if is_usb_device_present(DFU_USB_VID, DFU_USB_PID):
+        print(f"Found device already in STM32 DFU mode ({DEVICE_USB_ID}).")
+        return
+
+    try:
+        usb_dev = dagwood_utils.find_usb_device(board_id)
+    except (ValueError, usb.core.USBError) as e:
+        raise RuntimeError(
+            f"Neither a running Dagwood device nor an STM32 DFU device "
+            f"({DEVICE_USB_ID}) was found ({e})."
+        ) from e
+
+    print("Requesting Dagwood to reboot into STM32 DFU mode...")
+    dagwood_utils.dw_dfu(usb_dev)
+
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if is_usb_device_present(DFU_USB_VID, DFU_USB_PID):
+            time.sleep(0.2)
+            return
+        time.sleep(0.1)
+
+    raise RuntimeError(
+        f"Timed out waiting for Dagwood to enter DFU mode ({DEVICE_USB_ID})."
+    )
+
+
+def wait_for_dagwood_boot(board_id=None, timeout_s=5.0):
+    """Wait for Dagwood to re-enumerate in normal application mode after DFU."""
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if is_usb_device_present(
+            DAGWOOD_USB_VID, DAGWOOD_USB_PID, serial=board_id
+        ):
+            return True
+        time.sleep(0.2)
+    return False
+
+
+def flash_dfu(build_path, board_id=None):
     """Flash the firmware using dfu-util."""
     if not shutil.which(DFU_UTIL):
         raise RuntimeError(
@@ -122,20 +181,35 @@ def flash_dfu(build_path):
     if not bin_path.is_file():
         raise FileNotFoundError(f"Could not find firmware binary: {bin_path}")
 
-    subprocess.run(
-        [
-            DFU_UTIL,
-            f"-d,{DEVICE_USB_ID}",
-            "-s",
-            "0x8000000:leave",
-            "-a",
-            "0",
-            "-D",
-            str(bin_path),
-        ],
-        check=True,
+    enter_dfu_if_needed(board_id)
+
+    dfu_cmd = [
+        DFU_UTIL,
+        f"-d,{DEVICE_USB_ID}",
+        "-s",
+        "0x8000000:leave",
+        "-a",
+        "0",
+        "-D",
+        str(bin_path),
+    ]
+    proc = subprocess.run(
+        dfu_cmd,
+        check=False,
         env=os.environ,
     )
+    # The STM32H7 ROM bootloader jumps to the application during the final
+    # DFU_GETSTATUS poll on ":leave", which can cause dfu-util to exit with 74
+    # (EX_IOERR) even though manifestation succeeded.
+    if proc.returncode not in (0, 74):
+        raise subprocess.CalledProcessError(proc.returncode, dfu_cmd)
+
+    if not wait_for_dagwood_boot(board_id):
+        if proc.returncode != 0:
+            raise subprocess.CalledProcessError(proc.returncode, dfu_cmd)
+        print(
+            "Warning: Timed out waiting for Dagwood USB device to re-enumerate."
+        )
 
 
 def get_built_version(build_path):
@@ -162,10 +236,6 @@ def get_built_version(build_path):
 
 def get_running_version(board_id=None):
     """Query the firmware version currently running on the Dagwood board."""
-    # pylint: disable=import-outside-toplevel
-    import dagwood_utils
-    import usb.core
-
     try:
         usb_dev = dagwood_utils.find_usb_device(board_id)
         return dagwood_utils.dw_version(usb_dev)
@@ -288,7 +358,7 @@ def main(argv):
             if args.flasher == "openocd":
                 flash_openocd(build_path)
             elif args.flasher == "dfu":
-                flash_dfu(build_path)
+                flash_dfu(build_path, args.board_id)
         except RuntimeError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1

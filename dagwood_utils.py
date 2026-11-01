@@ -161,6 +161,11 @@ def parse_arguments(argv):
         help="Reboot the dagwood board",
     )
     parser.add_argument(
+        "--dfu",
+        action="store_true",
+        help="Reboot the dagwood board into STM32 DFU bootloader mode",
+    )
+    parser.add_argument(
         "-i",
         "--identify",
         action="store_true",
@@ -210,6 +215,7 @@ USB_REQ_AP_SET_MODE = 12
 USB_REQ_AP_PWRBTN = 13
 USB_REQ_AP_SET_ACOK = 14
 USB_REQ_AP_SET_SIGNAL = 15
+USB_REQ_DFU = 16
 
 # AP signals bitmask
 AP_SIG_EN_S5 = 1 << 0
@@ -261,6 +267,15 @@ def dw_reboot(dev):
     try:
         dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, 0, USB_REQ_REBOOT, 0)
     except usb.USBError as e:
+        # This is expected, ignore
+        pass
+
+
+def dw_dfu(dev):
+    """Reboot the Dagwood board into STM32 DFU bootloader mode"""
+    try:
+        dev.ctrl_transfer(TO_DEV_REQ_TYPE, 0, 0, USB_REQ_DFU, 0)
+    except usb.USBError:
         # This is expected, ignore
         pass
 
