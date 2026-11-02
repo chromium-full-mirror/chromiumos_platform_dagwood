@@ -13,6 +13,9 @@
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
+/* STM32H743 System Memory ROM bootloader ID address (AN2606) */
+#define ROM_BOOTLOADER_VERSION_ADDR 0x1ff1e7feU
+
 const struct led_dt_spec status_led = LED_DT_SPEC_GET(DT_NODELABEL(status_led));
 
 static bool identify;
@@ -38,6 +41,16 @@ static void identify_cb(uint16_t index, uint16_t value, const uint8_t *buf,
 
 USB_REQUEST_CALLBACK_DEFINE(identify_cb, NULL);
 
+static void print_rom_bootloader_version(void)
+{
+	uint8_t rom_ver = *(const uint8_t *)ROM_BOOTLOADER_VERSION_ADDR;
+	uint8_t major = rom_ver >> 4;
+	uint8_t minor = rom_ver & 0x0f;
+
+	LOG_INF("ROM bootloader version: 0x%02x (v%u.%u)", rom_ver, major,
+		minor);
+}
+
 int main(void)
 {
 	int ret;
@@ -51,6 +64,8 @@ int main(void)
 	}
 
 	LOG_INF("started");
+
+	print_rom_bootloader_version();
 
 	while (true) {
 		led_on_dt(&status_led);
