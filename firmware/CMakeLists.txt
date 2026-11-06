@@ -21,6 +21,8 @@ endif()
 separate_arguments(EXTRA_EC_VERSION_FLAGS_LIST UNIX_COMMAND
 		   ${EXTRA_EC_VERSION_FLAGS})
 
+# The version script takes the git revision of its working directory. Run it
+# in this repository, so the version names the Dagwood commit, not the EC one.
 execute_process(
 	COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${PLATFORM_EC}/zephyr/zmake/
 		${PYTHON_EXECUTABLE}
@@ -28,6 +30,7 @@ execute_process(
 		"-"
 		"--name" "dagwood"
 		${EXTRA_EC_VERSION_FLAGS_LIST}
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	OUTPUT_VARIABLE DW_VERSION
 	OUTPUT_STRIP_TRAILING_WHITESPACE
 	ERROR_QUIET
